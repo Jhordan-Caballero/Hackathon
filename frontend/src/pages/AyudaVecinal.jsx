@@ -7,16 +7,7 @@ import SectionHero from '../components/shared/SectionHero';
 import EmptyState from '../components/ui/EmptyState';
 import SearchBar from '../components/shared/SearchBar';
 import PromotionalBanner from '../components/shared/PromotionalBanner';
-// Categorías de ayuda vecinal
-const categories = [
-    { id: 'todas', label: 'Todas', icon: '✹' },
-    { id: 'apoyo', label: 'Apoyo comunitario', icon: '🤝' },
-    { id: 'hogar', label: 'Hogar y jardín', icon: '🌿' },
-    { id: 'educacion', label: 'Educación', icon: '📚' },
-    { id: 'alimentos', label: 'Alimentos', icon: '🥐' },
-    { id: 'tecnologia', label: 'Tecnología', icon: '💻' },
-    { id: 'otros', label: 'Otros', icon: '✨' },
-];
+import { PERU_LOCATIONS } from '../datos/peruLocations';
 
 // Datos de ejemplo
 const requests = [
@@ -24,13 +15,13 @@ const requests = [
         id: 1,
         type: 'ayuda',
         typeLabel: 'Solicito ayuda',
-        categoryId: 'apoyo',
-        category: 'Apoyo comunitario',
         icon: '🤝',
         title: 'Apoyo para realizar compras',
         description:
             'Busco una persona que pueda ayudarme con las compras del mercado, ya que por motivos personales se me dificulta salir de casa.',
         provider: 'Rosa M.',
+        city: 'Arequipa',
+        district: 'Cerro Colorado',
         location: 'Sector Las Palmas',
         phone: '51987654321',
         date: 'Hace 2 horas',
@@ -41,13 +32,13 @@ const requests = [
         id: 2,
         type: 'intercambio',
         typeLabel: 'Intercambio',
-        categoryId: 'hogar',
-        category: 'Hogar y jardín',
         icon: '🌿',
         title: 'Intercambio de plantas',
         description:
             'Tengo algunas plantas ornamentales y quisiera intercambiarlas por plantas aromáticas o medicinales para mi pequeño jardín.',
         provider: 'Carlos R.',
+        city: 'Arequipa',
+        district: 'Yanahuara',
         location: 'Calle Los Aromos',
         phone: '51987654322',
         date: 'Hace 5 horas',
@@ -58,13 +49,13 @@ const requests = [
         id: 3,
         type: 'ayuda',
         typeLabel: 'Solicito ayuda',
-        categoryId: 'educacion',
-        category: 'Educación',
         icon: '📚',
         title: 'Apoyo escolar para mi hijo',
         description:
             'Estoy buscando a alguien que pueda brindar orientación en matemáticas para un estudiante de secundaria. Agradecería mucho su apoyo.',
         provider: 'María L.',
+        city: 'Arequipa',
+        district: 'Cayma',
         location: 'Sector 1',
         phone: '51987654323',
         date: 'Ayer',
@@ -75,13 +66,13 @@ const requests = [
         id: 4,
         type: 'intercambio',
         typeLabel: 'Intercambio',
-        categoryId: 'hogar',
-        category: 'Hogar y jardín',
         icon: '🧰',
         title: 'Ofrezco herramientas de jardinería',
         description:
             'Tengo herramientas de jardinería que ya no utilizo. Me gustaría intercambiarlas por libros o materiales escolares en buen estado.',
         provider: 'Miguel P.',
+        city: 'Arequipa',
+        district: 'Cerro Colorado',
         location: 'Sector Las Palmas',
         phone: '51987654324',
         date: 'Hace 2 días',
@@ -92,13 +83,13 @@ const requests = [
         id: 5,
         type: 'ayuda',
         typeLabel: 'Solicito ayuda',
-        categoryId: 'alimentos',
-        category: 'Alimentos',
         icon: '🥐',
         title: 'Busco apoyo con alimentos',
         description:
             'Estoy buscando apoyo con algunos alimentos no perecibles para una familia que está pasando por una situación complicada.',
         provider: 'Elena G.',
+        city: 'Arequipa',
+        district: 'Alto Selva Alegre',
         location: 'Sector 2',
         phone: '51987654325',
         date: 'Hace 3 días',
@@ -109,13 +100,13 @@ const requests = [
         id: 6,
         type: 'intercambio',
         typeLabel: 'Intercambio',
-        categoryId: 'educacion',
-        category: 'Educación',
         icon: '📚',
         title: 'Intercambio de libros escolares',
         description:
             'Tengo libros escolares de secundaria en buen estado. Me gustaría intercambiarlos por otros materiales educativos.',
         provider: 'Luis A.',
+        city: 'Arequipa',
+        district: 'José Luis Bustamante y Rivero',
         location: 'Calle Los Pinos',
         phone: '51987654326',
         date: 'Hace 4 días',
@@ -126,22 +117,18 @@ const requests = [
 
 function AyudaVecinal() {
     const [search, setSearch] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('todas');
-    const [selectedLocation, setSelectedLocation] = useState('todas');
+    const [selectedCity, setSelectedCity] = useState('');
+    const [selectedDistrict, setSelectedDistrict] = useState('');
     const [selectedType, setSelectedType] = useState('todas');
     const [selectedRequest, setSelectedRequest] = useState(null);
 
-    // Obtener ubicaciones disponibles
-    const locations = useMemo(
-        () => [
-            ...new Set(
-                requests.map((request) => request.location)
-            ),
-        ],
-        []
-    );
+    // Cambio de ciudad con reinicio de distrito
+    const handleCityChange = (e) => {
+        setSelectedCity(e.target.value);
+        setSelectedDistrict('');
+    };
 
-    // Filtrar solicitudes
+    // Filtrar solicitudes por búsqueda texto, ciudad, distrito y tipo
     const filteredRequests = useMemo(() => {
         return requests.filter((request) => {
             const searchText = search.toLowerCase().trim();
@@ -151,42 +138,33 @@ function AyudaVecinal() {
                 request.description,
                 request.provider,
                 request.location,
-                request.category,
+                request.district,
+                request.city,
                 request.typeLabel,
-                ...request.tags,
+                ...(request.tags || []),
             ]
                 .join(' ')
                 .toLowerCase()
                 .includes(searchText);
 
-            const matchesCategory =
-                selectedCategory === 'todas' ||
-                request.categoryId === selectedCategory;
+            const matchesCity = !selectedCity || request.city === selectedCity;
+            const matchesDistrict = !selectedDistrict || request.district === selectedDistrict;
+            const matchesType = selectedType === 'todas' || request.type === selectedType;
 
-            const matchesLocation =
-                selectedLocation === 'todas' ||
-                request.location === selectedLocation;
-
-            const matchesType =
-                selectedType === 'todas' ||
-                request.type === selectedType;
-
-            return (
-                matchesSearch &&
-                matchesCategory &&
-                matchesLocation &&
-                matchesType
-            );
+            return matchesSearch && matchesCity && matchesDistrict && matchesType;
         });
-    }, [search, selectedCategory, selectedLocation, selectedType]);
+    }, [search, selectedCity, selectedDistrict, selectedType]);
 
     // Limpiar filtros
     const clearFilters = () => {
         setSearch('');
-        setSelectedCategory('todas');
-        setSelectedLocation('todas');
+        setSelectedCity('');
+        setSelectedDistrict('');
         setSelectedType('todas');
     };
+
+    const selectClass =
+        'w-full px-4 py-2.5 rounded-xl border border-brand-border bg-white text-xs text-brand-dark outline-none focus:border-brand-accent transition-colors';
 
     return (
         <section
@@ -200,16 +178,68 @@ function AyudaVecinal() {
                 description="Comparte lo que necesitas, ofrece tu apoyo e intercambia recursos con las personas de tu comunidad."
             />
 
-            {/* Buscador y filtros */}
+            {/* Buscador general */}
             <Reveal>
                 <SearchBar
                     search={search}
                     onSearchChange={setSearch}
                     searchPlaceholder="Buscar solicitudes, intercambios, apoyo..."
-                    selectedZone={selectedLocation}
-                    onZoneChange={setSelectedLocation}
                     resultsCount={filteredRequests.length}
                 />
+            </Reveal>
+
+            {/* Filtros Geográficos y Tipo de Solicitud */}
+            <Reveal className="mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Filtro Ciudad */}
+                    <div>
+                        <select
+                            value={selectedCity}
+                            onChange={handleCityChange}
+                            className={selectClass}
+                        >
+                            <option value="">Todas las ciudades</option>
+                            {Object.keys(PERU_LOCATIONS).map((city) => (
+                                <option key={city} value={city}>
+                                    {city}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Filtro Distrito */}
+                    <div>
+                        <select
+                            value={selectedDistrict}
+                            onChange={(e) => setSelectedDistrict(e.target.value)}
+                            className={selectClass}
+                            disabled={!selectedCity}
+                        >
+                            <option value="">
+                                {selectedCity ? 'Todos los distritos' : 'Primero elige una ciudad'}
+                            </option>
+                            {selectedCity &&
+                                PERU_LOCATIONS[selectedCity].map((dist) => (
+                                    <option key={dist} value={dist}>
+                                        {dist}
+                                    </option>
+                                ))}
+                        </select>
+                    </div>
+
+                    {/* Filtro Tipo de Publicación */}
+                    <div>
+                        <select
+                            value={selectedType}
+                            onChange={(e) => setSelectedType(e.target.value)}
+                            className={selectClass}
+                        >
+                            <option value="todas">Todos los tipos</option>
+                            <option value="ayuda">Solicitud de ayuda</option>
+                            <option value="intercambio">Intercambio</option>
+                        </select>
+                    </div>
+                </div>
             </Reveal>
 
             {/* Encabezado de resultados */}
@@ -229,8 +259,6 @@ function AyudaVecinal() {
                         >
                             <PublicationCard
                                 publication={request}
-                                categoryLabel={request.category}
-                                typeLabel={request.typeLabel}
                                 onDetails={setSelectedRequest}
                             />
                         </Reveal>
@@ -240,7 +268,7 @@ function AyudaVecinal() {
                 <EmptyState
                     icon="volunteer_activism"
                     title="No encontramos solicitudes"
-                    description="Prueba con otra búsqueda o modifica los filtros."
+                    description="Prueba con otra búsqueda o modifica los filtros de ciudad y distrito."
                     actionLabel="Limpiar filtros"
                     onAction={clearFilters}
                 />

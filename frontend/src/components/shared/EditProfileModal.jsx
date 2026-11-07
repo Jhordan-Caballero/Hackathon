@@ -1,19 +1,27 @@
+import { useState, useEffect } from 'react';
 import { FiUser, FiMapPin, FiPhone } from 'react-icons/fi';
 import FormModalOrCard from '../forms/FormModalOrCard';
-
-const districtOptions = [
-    'Cerro Colorado',
-    'Arequipa (Cercado)',
-    'Cayma',
-    'Yanahuara',
-    'Alto Selva Alegre',
-    'Miraflores',
-    'José Luis Bustamante y Rivero',
-    'Paucarpata',
-];
+import { PERU_LOCATIONS } from '../../datos/peruLocations';
 
 function EditProfileModal({ profile, isOpen, onClose, onSave }) {
     if (!isOpen) return null;
+
+    const [selectedCity, setSelectedCity] = useState(profile?.city || '');
+    const [selectedDistrict, setSelectedDistrict] = useState(profile?.district || '');
+
+    // Sincronizar el estado con el perfil cuando se abre la modal o cambia el perfil
+    useEffect(() => {
+        if (profile) {
+            setSelectedCity(profile.city || '');
+            setSelectedDistrict(profile.district || '');
+        }
+    }, [profile]);
+
+    const handleCityChange = (e) => {
+        const newCity = e.target.value;
+        setSelectedCity(newCity);
+        setSelectedDistrict(''); // Resetea el distrito al cambiar la ciudad
+    };
 
     const getLocalPhone = (phone) => {
         if (!phone) return '';
@@ -32,7 +40,8 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
 
         const updatedProfile = {
             name: formData.get('name'),
-            district: formData.get('district'),
+            city: selectedCity,
+            district: selectedDistrict,
             location: formData.get('location'),
             phone: formattedPhone,
         };
@@ -51,6 +60,7 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
             onClose={onClose}
             submitText="Guardar cambios"
         >
+            {/* Nombre completo */}
             <div>
                 <label className={labelClass}>Nombre completo</label>
                 <div className="relative">
@@ -67,6 +77,31 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
                 </div>
             </div>
 
+            {/* Ciudad / Departamento */}
+            <div>
+                <label className={labelClass}>Ciudad / Departamento</label>
+                <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-lg pointer-events-none">
+                        <FiMapPin />
+                    </span>
+                    <select
+                        name="city"
+                        value={selectedCity}
+                        onChange={handleCityChange}
+                        className={inputClass}
+                        required
+                    >
+                        <option value="">Selecciona una ciudad</option>
+                        {Object.keys(PERU_LOCATIONS).map((city) => (
+                            <option key={city} value={city}>
+                                {city}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Distrito */}
             <div>
                 <label className={labelClass}>Distrito</label>
                 <div className="relative">
@@ -75,19 +110,26 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
                     </span>
                     <select
                         name="district"
-                        defaultValue={profile.district || 'Cerro Colorado'}
+                        value={selectedDistrict}
+                        onChange={(e) => setSelectedDistrict(e.target.value)}
                         className={inputClass}
+                        disabled={!selectedCity}
                         required
                     >
-                        {districtOptions.map((dist) => (
-                            <option key={dist} value={dist}>
-                                {dist}
-                            </option>
-                        ))}
+                        <option value="">
+                            {selectedCity ? 'Selecciona un distrito' : 'Primero elige una ciudad'}
+                        </option>
+                        {selectedCity &&
+                            PERU_LOCATIONS[selectedCity].map((dist) => (
+                                <option key={dist} value={dist}>
+                                    {dist}
+                                </option>
+                            ))}
                     </select>
                 </div>
             </div>
 
+            {/* Dirección o referencia */}
             <div>
                 <label className={labelClass}>Dirección o referencia de zona</label>
                 <div className="relative">
@@ -104,6 +146,7 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
                 </div>
             </div>
 
+            {/* WhatsApp */}
             <div>
                 <label className={labelClass}>Número de WhatsApp</label>
                 <div className="relative">

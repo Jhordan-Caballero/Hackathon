@@ -35,6 +35,14 @@ function PublicationDetail({
         setCommentText('');
     };
 
+    // Fallbacks para garantizar que la ciudad y el distrito SIEMPRE aparezcan
+    const city = publication.city || 'Arequipa';
+    const district = publication.district || 'Cerro Colorado';
+    const location = publication.location || '';
+
+    // Unir Dirección, Distrito y Ciudad en una sola línea
+    const fullLocation = [location, district, city].filter(Boolean).join(', ');
+
     return (
         <div
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
@@ -87,7 +95,7 @@ function PublicationDetail({
                         {publication.description}
                     </p>
 
-                    {/* Información del proveedor */}
+                    {/* Información del proveedor y Ubicación completa en 1 sola línea */}
                     <div className="space-y-3 text-sm text-brand-dark mb-5 border-y border-brand-border py-4">
                         <p className="flex items-center gap-2">
                             <FiUser className="text-brand-muted text-base shrink-0" />
@@ -96,7 +104,7 @@ function PublicationDetail({
 
                         <p className="flex items-center gap-2 text-xs text-brand-muted">
                             <HiOutlineLocationMarker className="text-brand-muted text-base shrink-0" />
-                            {publication.location}
+                            <span>{fullLocation}</span>
                         </p>
                     </div>
 

@@ -4,32 +4,16 @@ import { FiImage, FiPlus, FiX, FiPhone, FiAlertTriangle } from 'react-icons/fi';
 
 import FormModalOrCard from '../components/forms/FormModalOrCard';
 import ImageFrame from '../components/ui/ImageFrame';
+import { PERU_LOCATIONS } from '../datos/peruLocations';
 
 const STORAGE_KEY = 'community-publications';
 const PROFILE_KEY = 'community-profile';
 
-const categoryOptions = {
-    catalogo: ['Alimentos', 'Hogar', 'Educación', 'Mascotas', 'Tecnología', 'Otros'],
-    ayuda: ['Apoyo comunitario', 'Hogar y jardín', 'Educación', 'Alimentos', 'Tecnología', 'Otros'],
-    emergencia: ['Salud', 'Incendios', 'Seguridad', 'Accidentes', 'Servicios básicos', 'Otros'],
-};
-
-const districtOptions = [
-    'Cerro Colorado',
-    'Arequipa (Cercado)',
-    'Cayma',
-    'Yanahuara',
-    'Alto Selva Alegre',
-    'Miraflores',
-    'José Luis Bustamante y Rivero',
-    'Paucarpata',
-];
-
 const initialForm = {
     title: '',
     description: '',
-    category: '',
-    district: 'Cerro Colorado',
+    city: '',
+    district: '',
     location: '',
     price: '',
     phone: '',
@@ -54,24 +38,36 @@ function Publicar() {
     const [imagePreview, setImagePreview] = useState('');
     const [message, setMessage] = useState('');
 
-    // Cargar datos del perfil como valor inicial predeterminado
+    // Cargar datos del perfil como valor inicial predeterminado (Ciudad, Distrito y WhatsApp)
     useEffect(() => {
         const savedProfile = localStorage.getItem(PROFILE_KEY);
         if (savedProfile) {
             const parsed = JSON.parse(savedProfile);
             if (parsed.name) setUserName(parsed.name);
+            
+            let localPhone = '';
             if (parsed.phone) {
-                // Si el perfil tiene 11 dígitos con '51', obtenemos solo los 9 locales para el input
                 const cleaned = String(parsed.phone).replace(/\D/g, '');
-                const localPhone = cleaned.length === 11 && cleaned.startsWith('51') ? cleaned.slice(2) : cleaned;
-                setForm((prev) => ({ ...prev, phone: localPhone }));
+                localPhone = cleaned.length === 11 && cleaned.startsWith('51') ? cleaned.slice(2) : cleaned;
             }
+
+            setForm((prev) => ({
+                ...prev,
+                phone: localPhone,
+                city: parsed.city || '',
+                district: parsed.district || '',
+            }));
         }
     }, []);
 
     const handleTypeChange = (newType) => {
         setType(newType);
-        setForm((prev) => ({ ...initialForm, phone: prev.phone }));
+        setForm((prev) => ({ 
+            ...initialForm, 
+            phone: prev.phone,
+            city: prev.city,
+            district: prev.district
+        }));
         setTags([]);
         setTagInput('');
         setImagePreview('');
@@ -81,6 +77,16 @@ function Publicar() {
     const handleChange = (event) => {
         const { name, value } = event.target;
         setForm((prev) => ({ ...prev, [name]: value }));
+    };
+
+    // Al cambiar la ciudad, se actualiza y se resetea el distrito
+    const handleCityChange = (e) => {
+        const selectedCity = e.target.value;
+        setForm((prev) => ({
+            ...prev,
+            city: selectedCity,
+            district: '',
+        }));
     };
 
     const handleAddTag = () => {
@@ -114,7 +120,6 @@ function Publicar() {
     const handleSubmit = (event) => {
         event.preventDefault();
 
-        // Limpiar y asegurar prefijo de 11 dígitos para el guardado interno (51 + 9 dígitos)
         const rawPhone = form.phone.replace(/\D/g, '');
         const formattedPhone = rawPhone.length === 9 ? `51${rawPhone}` : rawPhone;
 
@@ -129,12 +134,11 @@ function Publicar() {
                     : type === 'ayuda'
                         ? 'Ayuda vecinal'
                         : 'Emergencia',
-            categoryId: form.category.toLowerCase().replaceAll(' ', '-'),
-            category: form.category,
             icon: type === 'emergencia' ? '🚨' : type === 'ayuda' ? '🤝' : '🥐',
             title: form.title.trim(),
             description: form.description.trim(),
             provider: userName,
+            city: form.city,
             district: form.district,
             location: form.location.trim(),
             phone: formattedPhone,
@@ -181,10 +185,11 @@ function Publicar() {
                             key={option.value}
                             type="button"
                             onClick={() => handleTypeChange(option.value)}
-                            className={`rounded-xl border p-3 text-center transition ${type === option.value
+                            className={`rounded-xl border p-3 text-center transition ${
+                                type === option.value
                                     ? 'border-brand-accent bg-brand-soft text-brand-accent font-semibold'
                                     : 'border-brand-border hover:bg-brand-soft text-brand-dark'
-                                }`}
+                            }`}
                         >
                             <span className="block text-xl mb-1">{option.icon}</span>
                             <span className="text-xs">{option.label}</span>
@@ -238,25 +243,6 @@ function Publicar() {
                 />
             </div>
 
-            {/* Categoría */}
-            <div>
-                <label className={labelClass}>Categoría</label>
-                <select
-                    name="category"
-                    value={form.category}
-                    onChange={handleChange}
-                    className={inputClass}
-                    required
-                >
-                    <option value="">Selecciona una categoría</option>
-                    {categoryOptions[type].map((cat) => (
-                        <option key={cat} value={cat}>
-                            {cat}
-                        </option>
-                    ))}
-                </select>
-            </div>
-
             {/* Precio solo si es catálogo */}
             {type === 'catalogo' && (
                 <div>
@@ -275,6 +261,25 @@ function Publicar() {
                 </div>
             )}
 
+            {/* Ciudad / Departamento */}
+            <div>
+                <label className={labelClass}>Ciudad / Departamento</label>
+                <select
+                    name="city"
+                    value={form.city}
+                    onChange={handleCityChange}
+                    className={inputClass}
+                    required
+                >
+                    <option value="">Selecciona una ciudad</option>
+                    {Object.keys(PERU_LOCATIONS).map((city) => (
+                        <option key={city} value={city}>
+                            {city}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
             {/* Distrito */}
             <div>
                 <label className={labelClass}>Distrito</label>
@@ -283,13 +288,18 @@ function Publicar() {
                     value={form.district}
                     onChange={handleChange}
                     className={inputClass}
+                    disabled={!form.city}
                     required
                 >
-                    {districtOptions.map((dist) => (
-                        <option key={dist} value={dist}>
-                            {dist}
-                        </option>
-                    ))}
+                    <option value="">
+                        {form.city ? 'Selecciona un distrito' : 'Primero elige una ciudad'}
+                    </option>
+                    {form.city &&
+                        PERU_LOCATIONS[form.city].map((dist) => (
+                            <option key={dist} value={dist}>
+                                {dist}
+                            </option>
+                        ))}
                 </select>
             </div>
 

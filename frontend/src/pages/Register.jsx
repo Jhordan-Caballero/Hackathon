@@ -3,39 +3,41 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiUser, FiMapPin, FiPhone } from 'react-icons/fi';
 import FormModalOrCard from '../components/forms/FormModalOrCard';
 import logoImg from '../assets/Loge.png';
+import { PERU_LOCATIONS } from '../datos/peruLocations';
 
 const PROFILE_KEY = 'community-profile';
-
-const districtOptions = [
-    'Cerro Colorado',
-    'Arequipa (Cercado)',
-    'Cayma',
-    'Yanahuara',
-    'Alto Selva Alegre',
-    'Miraflores',
-    'José Luis Bustamante y Rivero',
-    'Paucarpata',
-];
 
 function Registro() {
     const navigate = useNavigate();
     const [form, setForm] = useState({
         name: '',
-        district: 'Cerro Colorado',
+        city: '',
+        district: '',
         location: '',
         phone: '',
     });
     const [message, setMessage] = useState('');
 
+    // Manejo general de inputs de texto/teléfono
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
+    // Manejo del cambio de ciudad: actualiza la ciudad y limpia el distrito
+    const handleCityChange = (e) => {
+        const selectedCity = e.target.value;
+        setForm((prev) => ({
+            ...prev,
+            city: selectedCity,
+            district: '',
+        }));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // Guardar el nuevo perfil localmente incluyendo el distrito
+        // Guardar el nuevo perfil localmente incluyendo ciudad y distrito
         localStorage.setItem(PROFILE_KEY, JSON.stringify(form));
         setMessage('¡Registro exitoso! Redirigiendo a tu perfil...');
 
@@ -87,6 +89,30 @@ function Registro() {
                 </div>
             </div>
 
+            {/* Ciudad / Departamento */}
+            <div>
+                <label className={labelClass}>Ciudad / Departamento</label>
+                <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-lg pointer-events-none">
+                        <FiMapPin />
+                    </span>
+                    <select
+                        name="city"
+                        value={form.city}
+                        onChange={handleCityChange}
+                        className={inputClass}
+                        required
+                    >
+                        <option value="">-- Selecciona una ciudad --</option>
+                        {Object.keys(PERU_LOCATIONS).map((city) => (
+                            <option key={city} value={city}>
+                                {city}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             {/* Distrito */}
             <div>
                 <label className={labelClass}>Distrito</label>
@@ -99,13 +125,20 @@ function Registro() {
                         value={form.district}
                         onChange={handleChange}
                         className={inputClass}
+                        disabled={!form.city}
                         required
                     >
-                        {districtOptions.map((dist) => (
-                            <option key={dist} value={dist}>
-                                {dist}
-                            </option>
-                        ))}
+                        <option value="">
+                            {form.city
+                                ? 'Selecciona un distrito'
+                                : 'Primero elige una ciudad'}
+                        </option>
+                        {form.city &&
+                            PERU_LOCATIONS[form.city].map((dist) => (
+                                <option key={dist} value={dist}>
+                                    {dist}
+                                </option>
+                            ))}
                     </select>
                 </div>
             </div>

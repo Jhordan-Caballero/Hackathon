@@ -20,6 +20,7 @@ const PROFILE_KEY = 'community-profile';
 
 const initialProfile = {
     name: 'María López',
+    city: 'Arequipa',
     district: 'Cerro Colorado',
     location: 'Sector Las Palmas',
     phone: '946414833',
@@ -31,12 +32,11 @@ const initialPublications = [
         ownerId: 'current-user',
         type: 'catalogo',
         typeLabel: 'Producto',
-        categoryId: 'alimentos',
-        category: 'Alimentos',
         icon: '🥐',
         title: 'Postres caseros',
         description: 'Ofrezco postres preparados en casa con ingredientes frescos.',
         provider: 'María López',
+        city: 'Arequipa',
         district: 'Cerro Colorado',
         location: 'Sector Las Palmas',
         phone: '946414833',
@@ -50,12 +50,11 @@ const initialPublications = [
         ownerId: 'current-user',
         type: 'ayuda',
         typeLabel: 'Solicito ayuda',
-        categoryId: 'educacion',
-        category: 'Educación',
         icon: '📚',
         title: 'Apoyo escolar en matemáticas',
         description: 'Busco apoyo para reforzar algunos temas de matemáticas.',
         provider: 'María López',
+        city: 'Arequipa',
         district: 'Cerro Colorado',
         location: 'Sector Las Palmas',
         phone: '946414833',
@@ -68,12 +67,11 @@ const initialPublications = [
         ownerId: 'current-user',
         type: 'emergencia',
         typeLabel: 'Emergencia',
-        categoryId: 'seguridad',
-        category: 'Seguridad',
         icon: '🚨',
         title: 'Falta de alumbrado en Calle 4',
         description: 'Luminaria apagada en la esquina del parque desde anoche.',
         provider: 'María López',
+        city: 'Arequipa',
         district: 'Cerro Colorado',
         location: 'Sector Las Palmas',
         phone: '946414833',
@@ -95,6 +93,7 @@ function Perfil() {
     const [editForm, setEditForm] = useState({
         title: '',
         description: '',
+        city: '',
         district: '',
         location: '',
         price: '',
@@ -142,6 +141,7 @@ function Perfil() {
         setEditForm({
             title: publication.title,
             description: publication.description,
+            city: publication.city || 'Arequipa',
             district: publication.district || 'Cerro Colorado',
             location: publication.location,
             price: publication.price ?? '',
@@ -198,6 +198,13 @@ function Perfil() {
     const myRequests = publications.filter((pub) => pub.type === 'ayuda' || pub.type === 'intercambio');
     const myEmergencies = publications.filter((pub) => pub.type === 'emergencia');
 
+    // Ubicación del perfil en 1 sola línea limpia
+    const fullProfileLocation = [
+        profile.location,
+        profile.district || 'Cerro Colorado',
+        profile.city || 'Arequipa'
+    ].filter(Boolean).join(', ');
+
     const renderPublicationList = (items, emptyMessage, createHref) => {
         if (items.length === 0) {
             return (
@@ -222,8 +229,6 @@ function Perfil() {
                     <div key={publication.id} className="flex flex-col">
                         <PublicationCard
                             publication={publication}
-                            categoryLabel={publication.category}
-                            typeLabel={publication.typeLabel}
                             onDetails={setSelectedPublication}
                         />
 
@@ -276,7 +281,7 @@ function Perfil() {
                         {profile.name}
                     </h2>
                     <p className="text-sm text-brand-muted mt-1">
-                        {profile.district ? `${profile.district} - ` : ''}{profile.location}
+                        {fullProfileLocation}
                     </p>
                 </div>
                 <span className="text-xs bg-brand-soft text-brand-accent px-4 py-2 rounded-full font-medium">
@@ -332,8 +337,13 @@ function Perfil() {
                         </div>
 
                         <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
+                            <span className="text-xs text-brand-muted block mb-1">Ciudad / Departamento</span>
+                            <p className="font-medium text-base">{profile.city || 'Arequipa'}</p>
+                        </div>
+
+                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
                             <span className="text-xs text-brand-muted block mb-1">Distrito</span>
-                            <p className="font-medium text-base">{profile.district || 'No especificado'}</p>
+                            <p className="font-medium text-base">{profile.district || 'Cerro Colorado'}</p>
                         </div>
 
                         <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
