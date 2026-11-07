@@ -20,8 +20,9 @@ const PROFILE_KEY = 'community-profile';
 
 const initialProfile = {
     name: 'María López',
+    district: 'Cerro Colorado',
     location: 'Sector Las Palmas',
-    phone: '51987654321',
+    phone: '946414833',
 };
 
 const initialPublications = [
@@ -36,8 +37,9 @@ const initialPublications = [
         title: 'Postres caseros',
         description: 'Ofrezco postres preparados en casa con ingredientes frescos.',
         provider: 'María López',
+        district: 'Cerro Colorado',
         location: 'Sector Las Palmas',
-        phone: '51987654321',
+        phone: '946414833',
         date: 'Hace 2 días',
         image: null,
         price: 15,
@@ -54,8 +56,9 @@ const initialPublications = [
         title: 'Apoyo escolar en matemáticas',
         description: 'Busco apoyo para reforzar algunos temas de matemáticas.',
         provider: 'María López',
+        district: 'Cerro Colorado',
         location: 'Sector Las Palmas',
-        phone: '51987654321',
+        phone: '946414833',
         date: 'Ayer',
         image: null,
         tags: ['#Educación', '#Apoyo'],
@@ -71,8 +74,9 @@ const initialPublications = [
         title: 'Falta de alumbrado en Calle 4',
         description: 'Luminaria apagada en la esquina del parque desde anoche.',
         provider: 'María López',
+        district: 'Cerro Colorado',
         location: 'Sector Las Palmas',
-        phone: '51987654321',
+        phone: '946414833',
         date: 'Hace 3 horas',
         image: null,
         tags: ['#Seguridad', '#Alumbrado'],
@@ -91,9 +95,22 @@ function Perfil() {
     const [editForm, setEditForm] = useState({
         title: '',
         description: '',
+        district: '',
         location: '',
         price: '',
+        tags: [],
+        status: 'activo',
     });
+
+    const formatPhone = (phone) => {
+        if (!phone) return '';
+        const cleaned = String(phone).replace(/\D/g, '');
+        const fullNumber = cleaned.length === 9 ? `51${cleaned}` : cleaned;
+        if (fullNumber.length === 11 && fullNumber.startsWith('51')) {
+            return `+${fullNumber.slice(0, 2)} ${fullNumber.slice(2, 5)} ${fullNumber.slice(5, 8)} ${fullNumber.slice(8)}`;
+        }
+        return phone;
+    };
 
     useEffect(() => {
         const savedProfile = localStorage.getItem(PROFILE_KEY);
@@ -125,8 +142,11 @@ function Perfil() {
         setEditForm({
             title: publication.title,
             description: publication.description,
+            district: publication.district || 'Cerro Colorado',
             location: publication.location,
             price: publication.price ?? '',
+            tags: publication.tags || [],
+            status: publication.status || 'activo',
         });
     };
 
@@ -256,7 +276,7 @@ function Perfil() {
                         {profile.name}
                     </h2>
                     <p className="text-sm text-brand-muted mt-1">
-                        {profile.location}
+                        {profile.district ? `${profile.district} - ` : ''}{profile.location}
                     </p>
                 </div>
                 <span className="text-xs bg-brand-soft text-brand-accent px-4 py-2 rounded-full font-medium">
@@ -312,13 +332,18 @@ function Perfil() {
                         </div>
 
                         <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
+                            <span className="text-xs text-brand-muted block mb-1">Distrito</span>
+                            <p className="font-medium text-base">{profile.district || 'No especificado'}</p>
+                        </div>
+
+                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
                             <span className="text-xs text-brand-muted block mb-1">Dirección / Zona</span>
                             <p className="font-medium text-base">{profile.location}</p>
                         </div>
 
                         <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
                             <span className="text-xs text-brand-muted block mb-1">Número de WhatsApp</span>
-                            <p className="font-medium text-base">{profile.phone}</p>
+                            <p className="font-medium text-base">{formatPhone(profile.phone)}</p>
                         </div>
                     </div>
                 </div>

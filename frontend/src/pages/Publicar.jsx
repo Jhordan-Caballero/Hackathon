@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FiImage } from 'react-icons/fi';
+import { FiImage, FiPlus, FiX, FiPhone, FiAlertTriangle } from 'react-icons/fi';
 
 import FormModalOrCard from '../components/forms/FormModalOrCard';
 import ImageFrame from '../components/ui/ImageFrame';
 
 const STORAGE_KEY = 'community-publications';
+const PROFILE_KEY = 'community-profile';
 
 const categoryOptions = {
     catalogo: ['Alimentos', 'Hogar', 'Educación', 'Mascotas', 'Tecnología', 'Otros'],
@@ -13,15 +14,25 @@ const categoryOptions = {
     emergencia: ['Salud', 'Incendios', 'Seguridad', 'Accidentes', 'Servicios básicos', 'Otros'],
 };
 
+const districtOptions = [
+    'Cerro Colorado',
+    'Arequipa (Cercado)',
+    'Cayma',
+    'Yanahuara',
+    'Alto Selva Alegre',
+    'Miraflores',
+    'José Luis Bustamante y Rivero',
+    'Paucarpata',
+];
+
 const initialForm = {
     title: '',
     description: '',
     category: '',
+    district: 'Cerro Colorado',
     location: '',
     price: '',
-    publicationType: 'producto',
-    helpType: 'ayuda',
-    phone: '51987654321',
+    phone: '',
 };
 
 function Publicar() {
@@ -37,12 +48,32 @@ function Publicar() {
     );
 
     const [form, setForm] = useState(initialForm);
+    const [userName, setUserName] = useState('María López');
+    const [tags, setTags] = useState([]);
+    const [tagInput, setTagInput] = useState('');
     const [imagePreview, setImagePreview] = useState('');
     const [message, setMessage] = useState('');
 
+    // Cargar datos del perfil como valor inicial predeterminado
+    useEffect(() => {
+        const savedProfile = localStorage.getItem(PROFILE_KEY);
+        if (savedProfile) {
+            const parsed = JSON.parse(savedProfile);
+            if (parsed.name) setUserName(parsed.name);
+            if (parsed.phone) {
+                // Si el perfil tiene 11 dígitos con '51', obtenemos solo los 9 locales para el input
+                const cleaned = String(parsed.phone).replace(/\D/g, '');
+                const localPhone = cleaned.length === 11 && cleaned.startsWith('51') ? cleaned.slice(2) : cleaned;
+                setForm((prev) => ({ ...prev, phone: localPhone }));
+            }
+        }
+    }, []);
+
     const handleTypeChange = (newType) => {
         setType(newType);
-        setForm(initialForm);
+        setForm((prev) => ({ ...initialForm, phone: prev.phone }));
+        setTags([]);
+        setTagInput('');
         setImagePreview('');
         setMessage('');
     };
@@ -50,6 +81,28 @@ function Publicar() {
     const handleChange = (event) => {
         const { name, value } = event.target;
         setForm((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleAddTag = () => {
+        const cleaned = tagInput.trim().replace(/^#+/, '');
+        if (!cleaned) return;
+        
+        const formattedTag = `#${cleaned}`;
+        if (!tags.includes(formattedTag)) {
+            setTags([...tags, formattedTag]);
+        }
+        setTagInput('');
+    };
+
+    const handleKeyDownTag = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddTag();
+        }
+    };
+
+    const handleRemoveTag = (tagToRemove) => {
+        setTags(tags.filter((tag) => tag !== tagToRemove));
     };
 
     const handleImageChange = (event) => {
@@ -61,28 +114,34 @@ function Publicar() {
     const handleSubmit = (event) => {
         event.preventDefault();
 
+        // Limpiar y asegurar prefijo de 11 dígitos para el guardado interno (51 + 9 dígitos)
+        const rawPhone = form.phone.replace(/\D/g, '');
+        const formattedPhone = rawPhone.length === 9 ? `51${rawPhone}` : rawPhone;
+
         const publication = {
             id: Date.now(),
             type,
             estado: type === 'emergencia' ? 'emergencia' : 'publicada',
+            status: 'activo',
             typeLabel:
                 type === 'catalogo'
-                    ? form.publicationType === 'producto' ? 'Producto' : 'Servicio'
+                    ? 'Catálogo'
                     : type === 'ayuda'
-                        ? form.helpType === 'ayuda' ? 'Solicito ayuda' : 'Intercambio'
+                        ? 'Ayuda vecinal'
                         : 'Emergencia',
             categoryId: form.category.toLowerCase().replaceAll(' ', '-'),
             category: form.category,
-            icon: type === 'emergencia' ? '⚠️' : type === 'ayuda' ? '🤝' : '🥐',
+            icon: type === 'emergencia' ? '🚨' : type === 'ayuda' ? '🤝' : '🥐',
             title: form.title.trim(),
             description: form.description.trim(),
-            provider: 'María López',
+            provider: userName,
+            district: form.district,
             location: form.location.trim(),
-            phone: form.phone,
+            phone: formattedPhone,
             date: 'Ahora',
             image: imagePreview || null,
             price: type === 'catalogo' ? Number(form.price) : null,
-            tags: [],
+            tags: tags,
             ownerId: 'current-user',
         };
 
@@ -134,45 +193,20 @@ function Publicar() {
                 </div>
             </div>
 
-            {/* Subtipos según selección */}
-            {type === 'catalogo' && (
-                <div>
-                    <label className={labelClass}>Tipo de publicación</label>
-                    <select
-                        name="publicationType"
-                        value={form.publicationType}
-                        onChange={handleChange}
-                        className={inputClass}
-                    >
-                        <option value="producto">Producto</option>
-                        <option value="servicio">Servicio</option>
-                    </select>
-                </div>
-            )}
-
-            {type === 'ayuda' && (
-                <div>
-                    <label className={labelClass}>Tipo de publicación</label>
-                    <select
-                        name="helpType"
-                        value={form.helpType}
-                        onChange={handleChange}
-                        className={inputClass}
-                    >
-                        <option value="ayuda">Solicito ayuda</option>
-                        <option value="intercambio">Intercambio</option>
-                    </select>
-                </div>
-            )}
-
+            {/* Aviso de emergencia */}
             {type === 'emergencia' && (
-                <div className="rounded-xl bg-red-50 border border-red-100 p-4">
-                    <p className="text-sm font-semibold text-red-800">
-                        Importante: reporte de emergencia
-                    </p>
-                    <p className="text-xs text-red-700 mt-1">
-                        Si existe peligro inmediato, comunícate también con los servicios de emergencia correspondientes.
-                    </p>
+                <div className="rounded-2xl bg-red-50 border border-red-200 p-4 flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center text-red-600 text-lg shrink-0 mt-0.5">
+                        <FiAlertTriangle />
+                    </div>
+                    <div>
+                        <p className="text-sm font-semibold text-red-900">
+                            Aviso importante de emergencia
+                        </p>
+                        <p className="text-xs text-red-700 mt-0.5 leading-relaxed">
+                            Reporta situaciones de riesgo con responsabilidad. Si se trata de un peligro inminente, contacta también a las autoridades locales.
+                        </p>
+                    </div>
                 </div>
             )}
 
@@ -241,17 +275,77 @@ function Publicar() {
                 </div>
             )}
 
-            {/* Ubicación */}
+            {/* Distrito */}
             <div>
-                <label className={labelClass}>Dirección o zona</label>
+                <label className={labelClass}>Distrito</label>
+                <select
+                    name="district"
+                    value={form.district}
+                    onChange={handleChange}
+                    className={inputClass}
+                    required
+                >
+                    {districtOptions.map((dist) => (
+                        <option key={dist} value={dist}>
+                            {dist}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Dirección / Zona específica */}
+            <div>
+                <label className={labelClass}>Dirección o referencia de zona</label>
                 <input
                     name="location"
                     value={form.location}
                     onChange={handleChange}
-                    placeholder="Ej. Sector Las Palmas"
+                    placeholder="Ej. Sector Las Palmas, Urb. Los Pinos"
                     className={inputClass}
                     required
                 />
+            </div>
+
+            {/* Etiquetas (#) dinámicas */}
+            <div>
+                <label className={labelClass}>Etiquetas (#)</label>
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={handleKeyDownTag}
+                        placeholder="Ej. Alimentos (Presiona Enter o +)"
+                        className={inputClass}
+                    />
+                    <button
+                        type="button"
+                        onClick={handleAddTag}
+                        className="px-4 bg-brand-accent text-white rounded-xl hover:bg-brand-accent-hover transition-colors flex items-center justify-center text-lg"
+                    >
+                        <FiPlus />
+                    </button>
+                </div>
+
+                {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                        {tags.map((tag) => (
+                            <span
+                                key={tag}
+                                className="inline-flex items-center gap-1.5 bg-brand-soft text-brand-accent text-xs font-semibold px-3 py-1.5 rounded-full border border-brand-border/60"
+                            >
+                                {tag}
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveTag(tag)}
+                                    className="hover:text-red-600 transition-colors"
+                                >
+                                    <FiX className="text-sm" />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Subir Fotografía */}
@@ -280,17 +374,27 @@ function Publicar() {
                 </label>
             </div>
 
-            {/* WhatsApp */}
+            {/* WhatsApp de contacto editable */}
             <div>
                 <label className={labelClass}>WhatsApp de contacto</label>
-                <input
-                    name="phone"
-                    value={form.phone}
-                    onChange={handleChange}
-                    placeholder="Número de WhatsApp"
-                    className={inputClass}
-                    required
-                />
+                <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-lg pointer-events-none">
+                        <FiPhone />
+                    </span>
+                    <input
+                        type="tel"
+                        name="phone"
+                        value={form.phone}
+                        onChange={handleChange}
+                        placeholder="Ej. 946414833"
+                        maxLength="9"
+                        className="w-full px-4 py-3 pl-11 rounded-xl border border-brand-border bg-white text-sm outline-none focus:border-brand-accent transition-colors text-brand-dark"
+                        required
+                    />
+                </div>
+                <p className="text-[11px] text-brand-muted mt-1.5">
+                    Viene cargado con el número de tu perfil, pero puedes cambiarlo si prefieres usar otro.
+                </p>
             </div>
         </FormModalOrCard>
     );

@@ -6,10 +6,22 @@ import logoImg from '../assets/Loge.png';
 
 const PROFILE_KEY = 'community-profile';
 
+const districtOptions = [
+    'Cerro Colorado',
+    'Arequipa (Cercado)',
+    'Cayma',
+    'Yanahuara',
+    'Alto Selva Alegre',
+    'Miraflores',
+    'José Luis Bustamante y Rivero',
+    'Paucarpata',
+];
+
 function Registro() {
     const navigate = useNavigate();
     const [form, setForm] = useState({
         name: '',
+        district: 'Cerro Colorado',
         location: '',
         phone: '',
     });
@@ -23,7 +35,7 @@ function Registro() {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // Guardar el nuevo perfil localmente
+        // Guardar el nuevo perfil localmente incluyendo el distrito
         localStorage.setItem(PROFILE_KEY, JSON.stringify(form));
         setMessage('¡Registro exitoso! Redirigiendo a tu perfil...');
 
@@ -75,9 +87,32 @@ function Registro() {
                 </div>
             </div>
 
+            {/* Distrito */}
+            <div>
+                <label className={labelClass}>Distrito</label>
+                <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-lg pointer-events-none">
+                        <FiMapPin />
+                    </span>
+                    <select
+                        name="district"
+                        value={form.district}
+                        onChange={handleChange}
+                        className={inputClass}
+                        required
+                    >
+                        {districtOptions.map((dist) => (
+                            <option key={dist} value={dist}>
+                                {dist}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             {/* Dirección / Zona */}
             <div>
-                <label className={labelClass}>Dirección o zona de residencia</label>
+                <label className={labelClass}>Dirección o referencia de zona</label>
                 <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-lg pointer-events-none">
                         <FiMapPin />
@@ -106,7 +141,8 @@ function Registro() {
                         name="phone"
                         value={form.phone}
                         onChange={handleChange}
-                        placeholder="Ej. 51987654321"
+                        placeholder="Ej. 946414833"
+                        maxLength="9"
                         required
                         className={inputClass}
                     />

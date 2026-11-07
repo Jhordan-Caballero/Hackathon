@@ -1,44 +1,51 @@
 @import "tailwindcss";
 @import "./styles/animations.css";
+
 /* ==============================
-    TIPOGRAFÍAS
+    TIPOGRAFÍAS ESTILO YAPE (Moderna & Urbana)
 ================================= */
 
-@import "@fontsource/newsreader/300.css";
-@import "@fontsource/newsreader/400.css";
-@import "@fontsource/newsreader/500.css";
-@import "@fontsource/newsreader/600.css";
-@import "@fontsource/newsreader/400-italic.css";
+/* Fuente para el cuerpo, párrafos y datos */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
 
-@import "@fontsource/plus-jakarta-sans/300.css";
-@import "@fontsource/plus-jakarta-sans/400.css";
-@import "@fontsource/plus-jakarta-sans/500.css";
-@import "@fontsource/plus-jakarta-sans/600.css";
-@import "@fontsource/plus-jakarta-sans/700.css";
+/* Fuente exacto estilo Yape para títulos, botones y UI */
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
 
 /* ==============================
-    VISUAL
+    VISUAL (Paleta Rojo Perú & Mi Barrio)
 ================================= */
 
 @theme {
     /* Tipografías */
-    --font-serif: "Newsreader", serif;
-    --font-sans: "Plus Jakarta Sans", sans-serif;
+    --font-serif: "Poppins", sans-serif;
+    --font-sans: "Inter", sans-serif;
+    --font-display: "Poppins", sans-serif;
+    --font-editorial-italic: "Poppins", sans-serif;
 
-    /* Colores */
-    --color-brand-cream: #FAFAF7;
-    --color-brand-surface: #FFFFFF;
-    --color-brand-border: #E8E6E1;
-    --color-brand-dark: #141413;
-    --color-brand-muted: #706E6A;
-    --color-brand-accent: #233930;
-    --color-brand-accent-hover: #1B2C25;
-    --color-brand-soft: #F4F2ED;
+    /* Paleta Inspirada en el Logo Mi Barrio & Bandera del Perú */
+    --color-brand-red: #A61C1E;         /* Rojo carmesí del logo */
+    --color-brand-red-bright: #D91023;  /* Rojo vivo */
+    --color-brand-red-dark: #7A0C13;    /* Rojo oscuro */
+    
+    --color-brand-dark: #121212;        /* Negro texto principal */
+    --color-brand-surface: #FFFFFF;     /* Blanco limpio */
+    --color-brand-cream: #F8F9FA;       /* Fondo neutro suave */
+    --color-brand-border: #E5E7EB;      
+    --color-brand-muted: #6B7280;       /* Texto secundario */
+    
+    /* Variables de Acción y Botones */
+    --color-brand-accent: #A61C1E;
+    --color-brand-accent-hover: #7A0C13;
+    --color-brand-soft: #FDE8E8;        
 
-    /* Sombras */
-    --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.03), 0 20px 40px -15px rgba(0, 0, 0, 0.03);
-    --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
-    --shadow-elevation: 0 25px 50px -12px rgba(0, 0, 0, 0.07);
+    /* Sombras planas/suaves tipo App */
+    --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+    --shadow-elevation: 0 12px 28px rgba(0, 0, 0, 0.1);
 }
 
 /* ==============================
@@ -62,8 +69,16 @@
         color: var(--color-brand-dark);
     }
 
+    /* Títulos y nombres limpios sin cursiva ni remates elegates */
+    h1, h2, h3, h4, h5, h6, .font-title {
+        font-family: var(--font-display);
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+
     button,
     a {
+        font-family: var(--font-display);
         -webkit-tap-highlight-color: transparent;
     }
 }

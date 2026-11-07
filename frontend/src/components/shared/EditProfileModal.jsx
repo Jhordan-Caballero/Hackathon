@@ -1,16 +1,40 @@
 import { FiUser, FiMapPin, FiPhone } from 'react-icons/fi';
 import FormModalOrCard from '../forms/FormModalOrCard';
 
+const districtOptions = [
+    'Cerro Colorado',
+    'Arequipa (Cercado)',
+    'Cayma',
+    'Yanahuara',
+    'Alto Selva Alegre',
+    'Miraflores',
+    'José Luis Bustamante y Rivero',
+    'Paucarpata',
+];
+
 function EditProfileModal({ profile, isOpen, onClose, onSave }) {
     if (!isOpen) return null;
+
+    const getLocalPhone = (phone) => {
+        if (!phone) return '';
+        const cleaned = String(phone).replace(/\D/g, '');
+        if (cleaned.length === 11 && cleaned.startsWith('51')) {
+            return cleaned.slice(2);
+        }
+        return cleaned;
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
+        const rawPhone = formData.get('phone').replace(/\D/g, '');
+        const formattedPhone = rawPhone.length === 9 ? `51${rawPhone}` : rawPhone;
+
         const updatedProfile = {
             name: formData.get('name'),
+            district: formData.get('district'),
             location: formData.get('location'),
-            phone: formData.get('phone'),
+            phone: formattedPhone,
         };
         onSave(updatedProfile);
     };
@@ -44,7 +68,28 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
             </div>
 
             <div>
-                <label className={labelClass}>Dirección o zona de residencia</label>
+                <label className={labelClass}>Distrito</label>
+                <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-lg pointer-events-none">
+                        <FiMapPin />
+                    </span>
+                    <select
+                        name="district"
+                        defaultValue={profile.district || 'Cerro Colorado'}
+                        className={inputClass}
+                        required
+                    >
+                        {districtOptions.map((dist) => (
+                            <option key={dist} value={dist}>
+                                {dist}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label className={labelClass}>Dirección o referencia de zona</label>
                 <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-lg pointer-events-none">
                         <FiMapPin />
@@ -68,7 +113,9 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
                     <input
                         type="tel"
                         name="phone"
-                        defaultValue={profile.phone}
+                        defaultValue={getLocalPhone(profile.phone)}
+                        placeholder="946414833"
+                        maxLength="9"
                         required
                         className={inputClass}
                     />
