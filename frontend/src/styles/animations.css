@@ -1,0 +1,166 @@
+/* ==============================
+   ANIMACIONES DE FONDO
+================================= */
+
+@keyframes floatSlow {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate(25px, -20px) scale(1.08);
+    }
+}
+
+@keyframes floatReverse {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate(-30px, 20px) scale(1.06);
+    }
+}
+
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        opacity: 0.45;
+    }
+
+    50% {
+        opacity: 0.75;
+    }
+}
+
+/* ==============================
+   ELEMENTOS FLOTANTES
+================================= */
+
+@keyframes floatingChip {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-7px);
+    }
+}
+
+@keyframes floatingChipLag {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-9px);
+    }
+}
+
+/* ==============================
+   EFECTO SHIMMER
+================================= */
+
+@keyframes shimmerMove {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(200%);
+    }
+}
+
+/* ==============================
+   CLASES DE ANIMACIÓN
+================================= */
+
+.animate-float-slow {
+    animation: floatSlow 14s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+    animation: floatReverse 18s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+    animation: pulseGlow 9s ease-in-out infinite;
+}
+
+.animate-float-chip {
+    animation: floatingChip 4.5s ease-in-out infinite;
+}
+
+.animate-float-chip-delayed {
+    animation: floatingChipLag 5.5s ease-in-out infinite 1.2s;
+}
+
+/* ==============================
+   BOTONES CON SHIMMER
+================================= */
+
+.btn-shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.22),
+            transparent);
+    transform: translateX(-150%);
+    transition: transform 0.6s ease;
+}
+
+.btn-shimmer:hover::after {
+    animation: shimmerMove 1.2s infinite;
+}
+
+/* ==============================
+   FONDO DE CUADRÍCULA
+================================= */
+
+.bg-fine-grid {
+    background-size: 48px 48px;
+    background-image:
+        linear-gradient(to right,
+            rgba(20, 20, 19, 0.02) 1px,
+            transparent 1px),
+        linear-gradient(to bottom,
+            rgba(20, 20, 19, 0.02) 1px,
+            transparent 1px);
+}
+
+/* ==============================
+   APARICIÓN DE SECCIONES
+================================= */
+
+.reveal-on-scroll {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+        opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.reveal-on-scroll.revealed {
+    opacity: 1;
+    transform: translateY(0);
+}
