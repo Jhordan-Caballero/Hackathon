@@ -1,23 +1,21 @@
+import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import AmbientBackground from './AmbientBackground';
 
-function MainLayout({ children }) {
+function MainLayout() {
     return (
-        <div className="relative min-h-screen overflow-x-hidden bg-brand-cream bg-fine-grid text-brand-dark font-sans antialiased">
-
+        <div className="relative min-h-screen bg-brand-cream bg-fine-grid text-brand-dark font-sans antialiased flex flex-col">
             <AmbientBackground />
 
-            <div className="relative z-10">
-
+            <div className="relative z-10 flex flex-col min-h-screen">
                 <Navbar />
 
-                <main>
-                    {children}
+                <main className="flex-1 overflow-x-hidden">
+                    <Outlet />
                 </main>
 
                 <Footer />
-
             </div>
         </div>
     );

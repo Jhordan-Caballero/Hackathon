@@ -1,84 +1,133 @@
 import { useState } from 'react';
-import BrandLogo from '../layout/BrandLogo';
+import { Link, NavLink } from 'react-router-dom';
+import BrandLogo from './BrandLogo';
 
 const navigationLinks = [
-    { label: '[enlace de navegación]', href: '#features' },
-    { label: '[enlace de navegación]', href: '#methodology' },
-    { label: '[enlace de navegación]', href: '#comparison' },
+    { label: 'Catálogo', to: '/' },
+    { label: 'Ayuda Vecinal', to: '/ayuda-vecinal' },
+    { label: 'Emergencias', to: '/emergencias', important: true },
+    { label: 'Mi Perfil', to: '/perfil' },
 ];
 
 function Navbar() {
     const [menuOpen, setMenuOpen] = useState(false);
 
+    const closeMenu = () => setMenuOpen(false);
+
+    const getLinkClass = ({ isActive }, important = false) =>
+        `whitespace-nowrap transition-colors duration-200 ${
+            isActive
+                ? 'text-brand-accent font-semibold'
+                : important
+                    ? 'text-red-600 font-semibold hover:text-red-700'
+                    : 'text-brand-muted hover:text-brand-dark'
+        }`;
+
     return (
-        <header className="sticky top-0 z-50 bg-[#FAFAF7]/90 backdrop-blur-md border-b border-brand-border/60 transition-all duration-300">
+        <header className="sticky top-0 z-50 bg-brand-cream/95 backdrop-blur-md border-b border-brand-border/70 transition-all">
 
-            <div className="max-w-7xl mx-auto px-6 lg:px-12 h-20 flex items-center justify-between">
+            {/* Altura ajustada a h-20 (80px) para permitir un logo grande */}
+            <div className="max-w-7xl mx-auto px-5 lg:px-10 h-20 flex items-center justify-between gap-4">
 
-                {/* Logotipo */}
-                <BrandLogo />
+                {/* Logotipo con espacio garantizado */}
+                <div className="shrink-0 flex items-center">
+                    <Link to="/" onClick={closeMenu} className="flex items-center">
+                        <BrandLogo />
+                    </Link>
+                </div>
 
-                {/* Navegación escritorio */}
-                <nav className="hidden lg:flex items-center gap-6 px-6 py-2 rounded-full bg-[#F4F3EE]/95 border border-brand-border shadow-xs text-xs font-medium text-brand-muted hover:border-brand-muted/30 transition-all duration-200">
+                {/* Navegación escritorio ampliada (Óvalo más grande y visible) */}
+                <nav className="hidden lg:flex items-center gap-7 px-7 py-3 rounded-full bg-white border border-brand-border text-sm font-semibold shadow-sm">
 
-                    {navigationLinks.map((link, index) => (
-                        <a
-                            key={index}
-                            href={link.href}
-                            className="hover:text-brand-dark transition-colors duration-200"
+                    {navigationLinks.map((link) => (
+                        <NavLink
+                            key={link.label}
+                            to={link.to}
+                            end={link.to === '/'}
+                            className={(props) =>
+                                getLinkClass(props, link.important)
+                            }
                         >
+                            {link.important && (
+                                <span className="mr-1.5 text-base">✱</span>
+                            )}
                             {link.label}
-                        </a>
+                        </NavLink>
                     ))}
+
                 </nav>
 
                 {/* Acciones */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 shrink-0">
 
-                    <a
-                        href="#cta"
-                        className="btn-shimmer hidden sm:inline-flex items-center justify-center text-xs font-semibold uppercase tracking-wider bg-brand-accent hover:bg-brand-accent-hover text-white px-5 py-2.5 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                    <Link
+                        to="/publicar"
+                        className="inline-flex items-center justify-center gap-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white text-xs font-semibold px-4 py-2.5 rounded-full transition-all duration-200 hover:-translate-y-0.5 shadow-sm"
                     >
-                        [botón de acción principal]
-                    </a>
+                        <span className="text-base leading-none">+</span>
+                        <span className="hidden sm:inline">Publicar</span>
+                    </Link>
 
-                    {/* Botón menú */}
+                    <Link
+                        to="/login"
+                        className="hidden sm:inline-flex items-center justify-center border border-brand-border bg-white hover:bg-brand-soft text-brand-muted hover:text-brand-dark text-xs font-medium px-4 py-2.5 rounded-full transition-colors"
+                    >
+                        Entrar
+                    </Link>
+
+                    {/* Botón menú móvil */}
                     <button
                         type="button"
                         aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
                         aria-expanded={menuOpen}
                         onClick={() => setMenuOpen(!menuOpen)}
-                        className="w-10 h-10 rounded-full bg-[#1D1A2F] hover:bg-brand-dark text-white flex flex-col items-center justify-center gap-1.5 transition-all duration-200 shadow-xs hover:scale-105 active:scale-95"
+                        className="lg:hidden w-10 h-10 rounded-full border border-brand-border bg-white flex flex-col items-center justify-center gap-1.5 hover:bg-brand-soft transition-colors"
                     >
-                        <span className={`w-4 h-0.5 bg-white rounded-full transition-transform duration-200 ${menuOpen ? 'translate-y-1 rotate-45' : ''}`} />
-
-                        <span className={`w-4 h-0.5 bg-white rounded-full transition-all duration-200 ${menuOpen ? '-translate-y-1 -rotate-45' : ''}`} />
+                        <span
+                            className={`w-4 h-0.5 bg-brand-dark rounded-full transition-transform ${
+                                menuOpen ? 'translate-y-1 rotate-45' : ''
+                            }`}
+                        />
+                        <span
+                            className={`w-4 h-0.5 bg-brand-dark rounded-full transition-transform ${
+                                menuOpen ? '-translate-y-1 -rotate-45' : ''
+                            }`}
+                        />
                     </button>
+
                 </div>
             </div>
 
-            {/* Menú desplegable */}
+            {/* Menú móvil */}
             {menuOpen && (
-                <nav className="lg:hidden absolute top-full left-0 w-full bg-brand-cream/95 backdrop-blur-md border-b border-brand-border shadow-card px-6 py-6 flex flex-col gap-5">
+                <nav className="lg:hidden absolute top-full left-0 w-full bg-brand-cream border-b border-brand-border shadow-card px-6 py-5 flex flex-col gap-5">
 
-                    {navigationLinks.map((link, index) => (
-                        <a
-                            key={index}
-                            href={link.href}
-                            onClick={() => setMenuOpen(false)}
-                            className="text-sm text-brand-muted hover:text-brand-dark transition-colors"
+                    {navigationLinks.map((link) => (
+                        <NavLink
+                            key={link.label}
+                            to={link.to}
+                            end={link.to === '/'}
+                            onClick={closeMenu}
+                            className={(props) =>
+                                `text-sm font-medium ${getLinkClass(
+                                    props,
+                                    link.important
+                                )}`
+                            }
                         >
+                            {link.important && '✱ '}
                             {link.label}
-                        </a>
+                        </NavLink>
                     ))}
 
-                    <a
-                        href="#cta"
-                        onClick={() => setMenuOpen(false)}
+                    <Link
+                        to="/login"
+                        onClick={closeMenu}
                         className="sm:hidden text-sm font-semibold text-brand-accent"
                     >
-                        [botón de acción principal]
-                    </a>
+                        Entrar
+                    </Link>
+
                 </nav>
             )}
 
