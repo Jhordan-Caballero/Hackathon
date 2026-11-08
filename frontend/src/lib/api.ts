@@ -14,14 +14,87 @@ import type {
   PublicationFeedItem,
   PublicationFilters,
   PublicationInput,
-  QuickProfileInput,
+  LoginInput,
+  RegisterInput,
   Review,
   Section,
 } from './types'
 
 // =====================================================================
-// SESIÓN Y PERFIL  (login rápido SIN contraseña = sesión anónima)
+// SESIÓN Y PERFIL  (login con NOMBRE + TELÉFONO, sin contraseña)
+//
+// Cómo funciona por dentro: Supabase necesita correo y contraseña, así que
+// los generamos a partir del teléfono (el usuario nunca los ve):
+//   correo     = 51987654321@vecinos.app
+//   contraseña = vecino-51987654321
+// Requisito en Supabase: Authentication > Sign In / Providers > Email >
+// "Confirm email" DESACTIVADO.
+// Riesgo conocido (demo): quien sepa tu número y nombre podría entrar.
+// Mejora futura: código por SMS.
 // =====================================================================
+
+function phoneCredentials(phone: string) {
+  const digits = normalizePhone(phone)
+  if (digits.length < 9) throw new Error('Escribe un número de celular válido (9 dígitos)')
+  return { email: `${digits}@vecinos.app`, password: `vecino-${digits}`, digits }
+}
+
+/** Quita tildes, mayúsculas y espacios extra para comparar nombres. */
+function simplifyName(name: string): string {
+  return name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ')
+}
+
+/** REGISTRO (primera vez): nombre, teléfono, región, distrito y referencia. */
+export async function registerWithPhone(input: RegisterInput): Promise<Profile> {
+  if (!input.full_name.trim()) throw new Error('Escribe tu nombre')
+  const { email, password, digits } = phoneCredentials(input.phone)
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: input.full_name.trim(),
+        phone: digits,
+        has_whatsapp: input.has_whatsapp ?? true,
+        region: input.region,
+        district: input.district,
+        neighborhood: input.neighborhood ?? null,
+      },
+    },
+  })
+  if (error) {
+    if (/already registered|already exists/i.test(error.message)) {
+      throw new Error('Ese número ya está registrado. Inicia sesión con tu nombre y teléfono.')
+    }
+    throw error
+  }
+  if (!data.session) {
+    throw new Error('Falta desactivar "Confirm email" en Supabase (Authentication > Email)')
+  }
+  const profile = await getMyProfile()
+  if (!profile) throw new Error('No se pudo crear el perfil')
+  return profile
+}
+
+/** LOGIN (siguientes veces): nombre + teléfono. */
+export async function loginWithPhone(input: LoginInput): Promise<Profile> {
+  const { email, password } = phoneCredentials(input.phone)
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) {
+    if (/invalid login credentials/i.test(error.message)) {
+      throw new Error('No encontramos ese número. Si es tu primera vez, regístrate.')
+    }
+    throw error
+  }
+  const profile = await getMyProfile()
+  // El nombre funciona como una verificación extra: basta con que coincida el primer nombre
+  const typedFirst = simplifyName(input.full_name).split(' ')[0] ?? ''
+  if (!profile || !typedFirst || !simplifyName(profile.full_name).includes(typedFirst)) {
+    await supabase.auth.signOut()
+    throw new Error('El nombre no coincide con el registrado para ese número')
+  }
+  return profile
+}
 
 /** Devuelve el id del usuario actual o null si es visitante. */
 export async function getUserId(): Promise<string | null> {
@@ -30,8 +103,8 @@ export async function getUserId(): Promise<string | null> {
 }
 
 /**
- * Se asegura de que exista una sesión. Si no hay, crea una anónima en silencio.
- * Útil para "Reportar emergencia" sin obligar a registrarse.
+ * Para "Reportar emergencia" sin cuenta: si no hay sesión, crea una anónima
+ * en silencio (requiere "Allow anonymous sign-ins", que ya está activado).
  */
 export async function ensureSession(fullName = 'Vecino'): Promise<string> {
   const current = await getUserId()
@@ -41,25 +114,6 @@ export async function ensureSession(fullName = 'Vecino'): Promise<string> {
   })
   if (error || !data.user) throw error ?? new Error('No se pudo iniciar sesión')
   return data.user.id
-}
-
-/** Registro / ingreso rápido: nombre, teléfono, distrito y referencia. */
-export async function quickLogin(input: QuickProfileInput): Promise<Profile> {
-  const userId = await ensureSession(input.full_name)
-  const { data, error } = await supabase
-    .from('profiles')
-    .upsert({
-      id: userId,
-      full_name: input.full_name.trim(),
-      whatsapp: normalizePhone(input.phone),
-      has_whatsapp: input.has_whatsapp,
-      district: input.district,
-      neighborhood: input.neighborhood ?? null,
-    })
-    .select()
-    .single()
-  if (error) throw error
-  return data as Profile
 }
 
 export async function getMyProfile(): Promise<Profile | null> {
@@ -80,7 +134,7 @@ export function isProfileComplete(p: Profile | null): boolean {
 }
 
 export async function updateMyProfile(
-  changes: Partial<Pick<Profile, 'full_name' | 'whatsapp' | 'has_whatsapp' | 'district' | 'neighborhood' | 'avatar_url'>>,
+  changes: Partial<Pick<Profile, 'full_name' | 'whatsapp' | 'has_whatsapp' | 'region' | 'district' | 'neighborhood' | 'avatar_url'>>,
 ): Promise<Profile> {
   const userId = await getUserId()
   if (!userId) throw new Error('Inicia sesión primero')
@@ -94,10 +148,7 @@ export async function updateMyProfile(
   return data as Profile
 }
 
-/**
- * OJO: con sesión anónima, cerrar sesión = perder acceso a sus publicaciones
- * desde ese celular. En la UI conviene mostrar una advertencia antes.
- */
+/** Cierra sesión. Puede volver a entrar con su nombre y teléfono. */
 export async function logout(): Promise<void> {
   await supabase.auth.signOut()
 }
@@ -157,6 +208,7 @@ export async function listPublications(f: PublicationFilters): Promise<Publicati
     }
   }
   if (f.categoryId) q = q.eq('category_id', f.categoryId)
+  if (f.region) q = q.eq('region', f.region)
   if (f.district) q = q.eq('district', f.district)
   if (f.intent) q = q.eq('intent', f.intent)
   if (f.type) q = q.eq('type', f.type)
@@ -196,6 +248,7 @@ export async function createPublication(input: PublicationInput, photos: File[] 
       tags: (input.tags ?? []).map(cleanTag).filter(Boolean),
       price: input.section === 'comunidad' ? null : input.price ?? null,
       location: input.location ?? profile.neighborhood,
+      region: input.region ?? profile.region,
       district: input.district ?? profile.district,
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,
@@ -289,12 +342,13 @@ export async function addReview(publicationId: string, rating: number, comment?:
 // EMERGENCIAS
 // =====================================================================
 
-export async function listEmergencies(opts: { district?: string; onlyActive?: boolean } = {}): Promise<EmergencyFeedItem[]> {
+export async function listEmergencies(opts: { region?: string; district?: string; onlyActive?: boolean } = {}): Promise<EmergencyFeedItem[]> {
   let q = supabase
     .from('emergencies_feed')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(100)
+  if (opts.region) q = q.eq('region', opts.region)
   if (opts.district) q = q.eq('district', opts.district)
   if (opts.onlyActive ?? true) q = q.neq('status', 'resuelta')
   const { data, error } = await q
@@ -323,6 +377,7 @@ export async function reportEmergency(input: EmergencyInput, photos: File[] = []
       emergency_type: input.emergency_type,
       description: input.description.trim(),
       location: input.location ?? profile?.neighborhood ?? null,
+      region: input.region ?? profile?.region ?? null,
       district: input.district ?? profile?.district ?? null,
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,

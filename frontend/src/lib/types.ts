@@ -17,8 +17,9 @@ export type EmergencyType =
   | 'inundacion'
   | 'salud'
   | 'seguridad'
+  | 'accidente'
+  | 'servicios_basicos'
   | 'persona_vulnerable'
-  | 'corte_servicios'
   | 'otro'
 export type EmergencyStatus = 'activa' | 'atendida' | 'resuelta'
 
@@ -36,6 +37,7 @@ export interface Profile {
   full_name: string
   whatsapp: string | null // número de teléfono
   has_whatsapp: boolean
+  region: string | null
   district: string | null
   neighborhood: string | null // referencia de ubicación
   avatar_url: string | null
@@ -55,6 +57,7 @@ export interface Publication {
   intent: Intent
   price: number | null
   location: string | null
+  region: string | null
   district: string | null
   latitude: number | null
   longitude: number | null
@@ -94,6 +97,7 @@ export interface Emergency {
   emergency_type: EmergencyType
   description: string | null
   location: string | null
+  region: string | null
   district: string | null
   latitude: number | null
   longitude: number | null
@@ -111,12 +115,20 @@ export interface EmergencyFeedItem extends Emergency {
 
 // ---------- Entradas de formularios ----------
 
-export interface QuickProfileInput {
+/** Formulario de Registro (la primera vez). */
+export interface RegisterInput {
   full_name: string
   phone: string
-  has_whatsapp: boolean
+  has_whatsapp?: boolean // por defecto true
+  region: string
   district: string
-  neighborhood?: string
+  neighborhood?: string // dirección o referencia
+}
+
+/** Formulario de Login (las siguientes veces). */
+export interface LoginInput {
+  full_name: string
+  phone: string
 }
 
 export interface PublicationInput {
@@ -129,6 +141,7 @@ export interface PublicationInput {
   tags?: string[]
   price?: number | null // se ignora si section = 'comunidad'
   location?: string
+  region?: string
   district?: string
   latitude?: number | null
   longitude?: number | null
@@ -140,6 +153,7 @@ export interface PublicationFilters {
   section: Section
   search?: string // texto libre o "#etiqueta"
   categoryId?: string
+  region?: string
   district?: string
   minRating?: number
   intent?: Intent
@@ -151,6 +165,7 @@ export interface EmergencyInput {
   emergency_type: EmergencyType
   description: string
   location?: string
+  region?: string
   district?: string
   latitude?: number | null
   longitude?: number | null
@@ -163,8 +178,9 @@ export const EMERGENCY_LABELS: Record<EmergencyType, string> = {
   sismo: 'Sismo',
   inundacion: 'Inundación / huaico',
   salud: 'Emergencia de salud',
-  seguridad: 'Seguridad / robo',
+  seguridad: 'Seguridad',
+  accidente: 'Accidentes',
+  servicios_basicos: 'Servicios básicos (agua, luz)',
   persona_vulnerable: 'Vecino en situación vulnerable',
-  corte_servicios: 'Corte de agua / luz',
   otro: 'Otro',
 }
