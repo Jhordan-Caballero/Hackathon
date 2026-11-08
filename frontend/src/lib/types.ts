@@ -49,7 +49,6 @@ export interface Publication {
   id: string
   user_id: string
   category_id: string | null
-  author_name: string | null
   title: string
   description: string | null
   section: Section
@@ -73,6 +72,7 @@ export interface Publication {
 
 // Lo que devuelve la vista publications_feed
 export interface PublicationFeedItem extends Publication {
+  author_name: string | null // viene del perfil del autor
   category_name: string | null
   category_slug: string | null
   avg_rating: number
@@ -103,13 +103,13 @@ export interface Emergency {
   longitude: number | null
   image_urls: string[]
   status: EmergencyStatus
-  reporter_name: string | null
   contact_phone: string | null
   created_at: string
   updated_at: string
 }
 
 export interface EmergencyFeedItem extends Emergency {
+  reporter_name: string | null // viene del perfil de quien reportó
   volunteers_count: number
 }
 
@@ -169,7 +169,7 @@ export interface EmergencyInput {
   district?: string
   latitude?: number | null
   longitude?: number | null
-  reporter_name?: string
+  reporter_name?: string // si no tiene cuenta, se usa como nombre de su perfil
   contact_phone?: string
 }
 

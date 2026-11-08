@@ -243,7 +243,7 @@ export async function createPublication(input: PublicationInput, photos: File[] 
       type: input.type,
       intent: input.intent,
       title: input.title.trim(),
-      description: input.description ?? null,
+      description: requireText(input.description, 'Escribe una descripción'),
       category_id: input.category_id ?? null,
       tags: (input.tags ?? []).map(cleanTag).filter(Boolean),
       price: input.section === 'comunidad' ? null : input.price ?? null,
@@ -253,7 +253,6 @@ export async function createPublication(input: PublicationInput, photos: File[] 
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,
       emergency_support: input.emergency_support ?? false,
-      author_name: profile.full_name,
       contact_whatsapp: normalizePhone(input.contact_whatsapp ?? profile.whatsapp ?? ''),
       has_whatsapp: profile.has_whatsapp,
       image_urls,
@@ -375,13 +374,14 @@ export async function reportEmergency(input: EmergencyInput, photos: File[] = []
     .from('emergencies')
     .insert({
       emergency_type: input.emergency_type,
-      description: input.description.trim(),
-      location: input.location ?? profile?.neighborhood ?? null,
+      description: requireText(input.description, 'Describe la emergencia'),
+      // location es obligatoria en la tabla: si no la dan, usamos la referencia o el distrito
+      location:
+        input.location?.trim() || profile?.neighborhood || input.district || profile?.district || 'Sin referencia',
       region: input.region ?? profile?.region ?? null,
       district: input.district ?? profile?.district ?? null,
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,
-      reporter_name: input.reporter_name || profile?.full_name || 'Vecino',
       contact_phone: normalizePhone(input.contact_phone ?? profile?.whatsapp ?? '') || null,
       image_urls,
     })
@@ -439,6 +439,12 @@ export function callLink(phone: string): string {
 
 export function smsLink(phone: string, message = ''): string {
   return `sms:+${normalizePhone(phone)}${message ? `?body=${encodeURIComponent(message)}` : ''}`
+}
+
+function requireText(value: string | undefined, message: string): string {
+  const text = value?.trim()
+  if (!text) throw new Error(message)
+  return text
 }
 
 function cleanTag(tag: string): string {
