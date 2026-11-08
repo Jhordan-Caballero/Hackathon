@@ -46,7 +46,6 @@ function PublicationCard({
             </h3>
 
             {/* Descripción */}
-            {/* 🚀 REEMPLÁZALA POR ESTA VERSIÓN PARA REMOVER EL [OCULTO] EN PANTALLA */}
             <p className="text-xs text-brand-muted leading-relaxed line-clamp-3 mb-4">
                {publication.description?.replace(' [OCULTO]', '')}
             </p>

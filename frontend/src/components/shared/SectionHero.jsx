@@ -6,7 +6,7 @@ function SectionHero({
     title = 'Lo bueno de vivir en tu barrio está',
     highlight = 'más cerca',
     description = 'Descubre productos, servicios y oficios de tus vecinos. Comparte lo que sabes hacer y conecta al instante.',
-    heroImage = '', // Pasa la URL de la foto aquí
+    heroImage = '', 
 }) {
     return (
         <Reveal>
@@ -44,9 +44,7 @@ function SectionHero({
                         </p>
                     </div>
 
-                    {/* Columna Derecha: Tarjeta Fotográfica con ImageFrame */}
                     <div className="lg:col-span-5 relative">
-                        {/* Marco de Foto Urbano con sombras y esquinas pronunciadas */}
                         <div className="relative z-10 transform lg:rotate-2 hover:rotate-0 transition-transform duration-300">
                             <ImageFrame
                                 src={heroImage}
@@ -55,7 +53,6 @@ function SectionHero({
                                 className="rounded-3xl border-4 border-white shadow-card"
                             />
                             
-                            {/* Badge flotante decorativo (Look App) */}
                             <div className="absolute -bottom-4 -left-4 bg-white px-4 py-3 rounded-2xl shadow-elevation border border-brand-border flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-brand-soft flex items-center justify-center text-brand-red font-bold text-lg">
                                     ♥

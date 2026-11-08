@@ -19,7 +19,6 @@ function Emergencias() {
     const [publications, setPublications] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Jalamos los datos reales desde la vista o tabla filtrando por 'comunidad' y 'emergency_support'
     useEffect(() => {
         async function fetchEmergencies() {
             setLoading(true);
@@ -33,8 +32,8 @@ function Emergencias() {
                             whatsapp
                         )
                     `)
-                    .eq('section', 'comunidad') // 🚀 Trae lo social del SQL
-                    .eq('emergency_support', true) // 🚀 FILTRA SOLAMENTE LAS EMERGENCIAS REALES
+                    .eq('section', 'comunidad') 
+                    .eq('emergency_support', true)
                     .order('created_at', { ascending: false });
 
                 if (error) {
@@ -60,14 +59,11 @@ function Emergencias() {
         fetchEmergencies();
     }, []);
 
-    // Extrae los distritos reales con emergencias para el buscador
     const locations = useMemo(() => {
         const locs = publications.map((pub) => pub.district);
         return [...new Set(locs.filter(Boolean))];
     }, [publications]);
 
-    // Filtrar emergencias en base a la barra de búsqueda superior
-    // Filtrar emergencias usando estrictamente Ciudad (region) y Distrito (district)
     const filteredEmergencies = useMemo(() => {
         return publications.filter((emergency) => {
             const searchText = search.toLowerCase().trim();
@@ -76,26 +72,22 @@ function Emergencias() {
             const description = emergency.description || '';
             const provider = emergency.provider || '';
             const district = emergency.district || '';
-            const region = emergency.region || ''; // 🚀 Sincronizado como la Ciudad
+            const region = emergency.region || '';
 
-            // El buscador solo rastrea texto en el título, descripción, autor o distrito
             const matchesSearch = [title, description, provider, district]
                 .join(' ')
                 .toLowerCase()
                 .includes(searchText);
 
-            // 🚀 FILTRO CIUDAD COMPLETO: Compara contra la columna 'region' de tu base de datos
             const matchesCity =
                 !selectedCity ||
                 selectedCity === 'todas' ||
                 emergency.region === selectedCity;
 
-            // 🚀 FILTRO DISTRITO COMPLETO: Compara contra la columna 'district' de tu base de datos
             const matchesLocation =
                 selectedLocation === 'todas' ||
                 emergency.district === selectedLocation;
 
-            // Filtro de privacidad por el tag oculto (quitamos la validación estricta de status)
             const matchesStatus = !description.includes('[OCULTO]');
 
             return matchesSearch && matchesLocation && matchesCity && matchesStatus;
@@ -121,7 +113,6 @@ function Emergencias() {
                 description="Comparte situaciones de emergencia de tu comunidad para mantener informados a los vecinos y promover una respuesta oportuna."
             />
 
-            {/* Buscador y filtros idéntico a tu Catálogo */}
             <Reveal>
                 <SearchBar
                     search={search}
@@ -131,7 +122,7 @@ function Emergencias() {
                     onCityChange={setSelectedCity}
                     selectedZone={selectedLocation}
                     onZoneChange={setSelectedLocation}
-                    resultsCount={filteredEmergencies.length} // 🚀 FIX QUIRÚRGICO: Cambiado a filteredEmergencies
+                    resultsCount={filteredEmergencies.length} 
                 />
             </Reveal>
 

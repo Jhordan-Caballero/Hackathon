@@ -165,9 +165,6 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
                     </div>
                 </div>
             </div>
-
-            {/* 🚀 SOLUCIÓN: Si tu FormModalOrCard inyecta botones automáticos abajo que se estiran, 
-                inyectar este bloque de estilos en línea anula el estiramiento del grid */}
             <style jsx global>{`
                 form button[type="submit"] {
                     max-w: 160px !important;
