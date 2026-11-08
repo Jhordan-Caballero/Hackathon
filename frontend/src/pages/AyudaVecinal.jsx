@@ -11,6 +11,7 @@ import { supabase } from '../supabaseClient';
 
 function AyudaVecinal() {
     const [search, setSearch] = useState('');
+    const [selectedCity, setSelectedCity] = useState('');
     const [selectedLocation, setSelectedLocation] = useState('todas');
     const [selectedPublication, setSelectedPublication] = useState(null);
 
@@ -26,14 +27,15 @@ function AyudaVecinal() {
                 const { data, error } = await supabase
                     .from('publications')
                     .select(`
-                        *,
-                        profiles (
-                            full_name,
-                            whatsapp
-                        )
-                    `)
-                    .eq('section', 'social') // Trae la ayuda vecinal e intercambios
+        *,
+        profiles (
+            full_name,
+            whatsapp
+        )
+    `)
+                    .eq('section', 'comunidad')
                     .order('created_at', { ascending: false });
+
 
                 if (error) {
                     console.error("Error al traer publicaciones sociales:", error.message);
@@ -60,7 +62,7 @@ function AyudaVecinal() {
 
     // Extrae dinámicamente las zonas/ubicaciones de la base de datos para tu select
     const locations = useMemo(() => {
-        const locs = publications.map((pub) => pub.location || pub.neighborhood);
+        const locs = publications.map((pub) => pub.district);
         return [...new Set(locs.filter(Boolean))];
     }, [publications]);
 
@@ -72,27 +74,36 @@ function AyudaVecinal() {
             const title = publication.title || '';
             const description = publication.description || '';
             const provider = publication.provider || '';
-            const location = publication.location || publication.neighborhood || '';
+
+            const locationText = [publication.district, publication.location].filter(Boolean).join(' ');
             const tags = Array.isArray(publication.tags) ? publication.tags : [];
 
-            const matchesSearch = [title, description, provider, location, ...tags]
+            const matchesSearch = [title, description, provider, locationText, ...tags]
                 .join(' ')
                 .toLowerCase()
                 .includes(searchText);
 
+            const matchesCity =
+                !selectedCity ||
+                selectedCity === 'todas' ||
+                publication.region === selectedCity;
+
             const matchesLocation =
                 selectedLocation === 'todas' ||
-                location === selectedLocation;
+                publication.district === selectedLocation;
 
-            // Filtro de privacidad por bypass del tag oculto
-            const matchesStatus = !publication.description?.includes('[OCULTO]'); 
+            const matchesType = publication.section === 'comunidad';
+            const matchesStatus = !publication.description?.includes('[OCULTO]');
+            const isNotEmergency = !publication.emergency_support;
 
-            return matchesSearch && matchesLocation && matchesStatus;
+            return matchesSearch && matchesLocation && matchesCity && matchesStatus && matchesType && isNotEmergency;
         });
-    }, [publications, search, selectedLocation]);
+    }, [publications, search, selectedCity, selectedLocation]);
+
 
     const clearFilters = () => {
         setSearch('');
+        setSelectedCity('');
         setSelectedLocation('todas');
     };
     return (
@@ -113,6 +124,8 @@ function AyudaVecinal() {
                     search={search}
                     onSearchChange={setSearch}
                     searchPlaceholder="Buscar solicitudes, intercambios, apoyo..."
+                    selectedCity={selectedCity}
+                    onCityChange={setSelectedCity}
                     selectedZone={selectedLocation}
                     onZoneChange={setSelectedLocation}
                     resultsCount={filteredPublications.length}

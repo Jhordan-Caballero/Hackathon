@@ -31,9 +31,10 @@ function PublicationCard({
             {/* Badge de precio */}
             {hasPrice && (
                <span className="absolute top-3 right-3 bg-brand-dark text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-md">
-                  S/ {Number(publication.price).toFixed(2)}
+                  Desde: S/ {Number(publication.price).toFixed(2)}
                </span>
             )}
+
          </div>
 
          {/* Información */}
@@ -45,9 +46,11 @@ function PublicationCard({
             </h3>
 
             {/* Descripción */}
+            {/* 🚀 REEMPLÁZALA POR ESTA VERSIÓN PARA REMOVER EL [OCULTO] EN PANTALLA */}
             <p className="text-xs text-brand-muted leading-relaxed line-clamp-3 mb-4">
-               {publication.description}
+               {publication.description?.replace(' [OCULTO]', '')}
             </p>
+
 
             {/* Hashtags */}
             <div className="flex flex-wrap gap-1.5 mb-4">

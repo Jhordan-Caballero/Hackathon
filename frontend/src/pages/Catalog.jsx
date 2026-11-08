@@ -12,8 +12,8 @@ import { supabase } from '../supabaseClient';
 function Catalog() {
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('todas');
-    const [selectedLocation, setSelectedLocation] = useState('todas');
-    const [selectedRating, setSelectedRating] = useState('todas');
+    const [selectedCity, setSelectedCity] = useState('');
+    const [selectedLocation, setSelectedLocation] = useState('todas'); const [selectedRating, setSelectedRating] = useState('todas');
     const [selectedPublication, setSelectedPublication] = useState(null);
 
     const [publications, setPublications] = useState([]);
@@ -23,6 +23,7 @@ function Catalog() {
         async function fetchPublications() {
             setLoading(true);
             try {
+                // 🚀 CORRECCIÓN DE BACKEND: Filtramos estrictamente por la sección comercial permitida en el SQL ('servicios')
                 const { data, error } = await supabase
                     .from('publications')
                     .select(`
@@ -32,6 +33,7 @@ function Catalog() {
                             whatsapp
                         )
                     `)
+                    .eq('section', 'servicios')
                     .order('created_at', { ascending: false });
 
                 if (error) {
@@ -39,12 +41,10 @@ function Catalog() {
                     return;
                 }
 
-                // Mapeamos los resultados para inyectar limpiamente 'provider' y 'phone' en tus componentes
                 const formattedData = (data || []).map(pub => ({
                     ...pub,
                     provider: pub.profiles?.full_name || 'Vecino anónimo',
                     phone: pub.contact_whatsapp || pub.profiles?.whatsapp || '',
-                    // Si tu imagen está en la base de datos como una lista o string, aseguramos compatibilidad
                     image: Array.isArray(pub.image_urls) ? pub.image_urls[0] : pub.image_urls
                 }));
 
@@ -59,9 +59,10 @@ function Catalog() {
     }, []);
 
     const locations = useMemo(() => {
-        const locs = publications.map((publication) => publication.location || publication.neighborhood);
+        const locs = publications.map((pub) => pub.district);
         return [...new Set(locs.filter(Boolean))];
     }, [publications]);
+
 
     const filteredPublications = useMemo(() => {
         return publications.filter((publication) => {
@@ -70,43 +71,45 @@ function Catalog() {
             const title = publication.title || '';
             const description = publication.description || '';
             const provider = publication.provider || '';
-            const location = publication.location || publication.neighborhood || '';
+
+            const locationText = [publication.district, publication.region].filter(Boolean).join(' ');
             const tags = Array.isArray(publication.tags) ? publication.tags : [];
 
-            const matchesSearch = [title, description, provider, location, ...tags]
+            const matchesSearch = [title, description, provider, locationText, ...tags]
                 .join(' ')
                 .toLowerCase()
                 .includes(searchText);
 
             const matchesCategory =
                 selectedCategory === 'todas' ||
-                publication.categoryId === selectedCategory ||
+                publication.category_id === selectedCategory ||
                 publication.type === selectedCategory;
+
+            const matchesCity =
+                !selectedCity ||
+                selectedCity === 'todas' ||
+                publication.region === selectedCity;
 
             const matchesLocation =
                 selectedLocation === 'todas' ||
-                location === selectedLocation;
+                publication.district === selectedLocation;
 
             const matchesRating =
                 selectedRating === 'todas' ||
                 (publication.rating ?? 5) >= Number(selectedRating);
 
-            const matchesStatus = !publication.description?.includes('[OCULTO]'); 
-            return (
-                matchesSearch &&
-                matchesCategory &&
-                matchesLocation &&
-                matchesRating &&
-                matchesStatus
-            );
+            const matchesType = publication.type === 'producto' || publication.type === 'servicio';
+
+            const matchesStatus = !publication.description?.includes('[OCULTO]');
+
+            return matchesSearch && matchesLocation && matchesCity && matchesType && matchesStatus;
         });
-    }, [publications, search, selectedCategory, selectedLocation, selectedRating]);
+    }, [publications, search, selectedCategory, selectedCity, selectedLocation, selectedRating]);
 
     const clearFilters = () => {
         setSearch('');
-        setSelectedCategory('todas');
+        setSelectedCity('');
         setSelectedLocation('todas');
-        setSelectedRating('todas');
     };
     return (
         <section
@@ -125,6 +128,8 @@ function Catalog() {
                     search={search}
                     onSearchChange={setSearch}
                     searchPlaceholder="Buscar alimentos, reparaciones, clases, costura..."
+                    selectedCity={selectedCity}
+                    onCityChange={setSelectedCity}
                     selectedZone={selectedLocation}
                     onZoneChange={setSelectedLocation}
                     resultsCount={filteredPublications.length}

@@ -133,9 +133,9 @@ function Publicar() {
             dbType = 'producto';
             dbIntent = 'ofrezco';
         } else if (type === 'ayuda') {
-            dbSection = 'comunidad'; // 🚀 Exigido por pub_section_chk
-            dbType = 'ayuda';       // 🚀 Exigido por pub_type_chk
-            dbIntent = 'solicito';   // 🚀 Exigido por pub_intent_chk
+            dbSection = 'comunidad';
+            dbType = 'ayuda';
+            dbIntent = 'solicito';
         } else if (type === 'emergencia') {
             dbSection = 'comunidad';
             dbType = 'ayuda';       // Mapeamos temporalmente a ayuda social para pasar el check
@@ -147,22 +147,23 @@ function Publicar() {
             const { error } = await supabase
                 .from('publications')
                 .insert([
+                    // Busca el objeto insertado dentro de tu handleSubmit y déjalo así:
                     {
                         user_id: profileData?.id,
                         title: form.title.trim(),
                         description: form.description.trim(),
-                        type: dbType,            // Envía 'producto', 'ayuda' o 'emergencia'
-                        section: dbSection,      // Envía 'servicios' o 'social'
-                        intent: dbIntent,        // Envía 'ofrezco', 'busco' o 'reporto'
+                        type: dbType,
+                        section: dbSection,
+                        intent: dbIntent,
                         price: type === 'catalogo' ? Number(form.price) : null,
-                        region: form.city || 'Arequipa',
-                        district: form.district || 'Cerro Colorado',
+                        region: form.city,      
+                        district: form.district, 
                         location: form.location.trim(),
-                        contact_whatsapp: formattedPhone,
+                        contact_whatsapp: formattedPhone, 
                         tags: tags.map(tag => tag.replace('#', '').toLowerCase().trim()),
-
-                        // Dejamos fuera el campo status para evitar trabar el check constraint
+                        emergency_support: type === 'emergencia'
                     }
+
                 ]);
 
             if (error) {
@@ -239,7 +240,13 @@ function Publicar() {
             )}
             <div>
                 <label className={labelClass}>Ciudad / Departamento</label>
-                <select name="city" value={form.city} onChange={handleCityChange} className={inputClass} required>
+                <select
+                    name="city"
+                    value={form.city}
+                    onChange={handleCityChange}
+                    className={inputClass}
+                    required
+                >
                     <option value="">Selecciona una ciudad</option>
                     {Object.keys(PERU_LOCATIONS).map((city) => <option key={city} value={city}>{city}</option>)}
                 </select>
@@ -247,7 +254,14 @@ function Publicar() {
 
             <div>
                 <label className={labelClass}>Distrito</label>
-                <select name="district" value={form.district} onChange={handleChange} className={inputClass} disabled={!form.city} required>
+                <select
+                    name="district"
+                    value={form.district}
+                    onChange={handleChange}
+                    className={inputClass}
+                    disabled={!form.city}
+                    required
+                >
                     <option value="">{form.city ? 'Selecciona un distrito' : 'Primero elige una ciudad'}</option>
                     {form.city && PERU_LOCATIONS[form.city].map((dist) => <option key={dist} value={dist}>{dist}</option>)}
                 </select>
@@ -291,10 +305,21 @@ function Publicar() {
 
             <div>
                 <label className={labelClass}>WhatsApp de contacto</label>
+                {/* REEMPLÁZALO PARA QUE QUEDE ASÍ: */}
                 <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-lg pointer-events-none"><FiPhone /></span>
-                    <input type="document" name="phone" value={form.phone} onChange={handleChange} placeholder="Ej. 946414833" maxLength="9" className="w-full px-4 py-3 pl-11 rounded-xl border border-brand-border bg-white text-sm outline-none focus:border-brand-accent transition-colors text-brand-dark" required />
+                    <input
+                        type="tel"
+                        name="phone"
+                        value={form.phone}
+                        onChange={handleChange}
+                        placeholder="Ej. 946414833"
+                        maxLength="9"
+                        className="w-full px-4 py-3 pl-11 rounded-xl border border-brand-border bg-white text-sm outline-none focus:border-brand-accent transition-colors text-brand-dark"
+                        required
+                    />
                 </div>
+
                 <p className="text-[11px] text-brand-muted mt-1.5">Viene cargado con el número de tu perfil, pero puedes cambiarlo si prefieres usar otro.</p>
             </div>
         </FormModalOrCard>

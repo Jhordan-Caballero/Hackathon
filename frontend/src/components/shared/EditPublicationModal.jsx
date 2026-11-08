@@ -1,17 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiPlus, FiX, FiAlertTriangle } from 'react-icons/fi';
 import FormModalOrCard from '../forms/FormModalOrCard';
-
-const districtOptions = [
-    'Cerro Colorado',
-    'Arequipa (Cercado)',
-    'Cayma',
-    'Yanahuara',
-    'Alto Selva Alegre',
-    'Miraflores',
-    'José Luis Bustamante y Rivero',
-    'Paucarpata',
-];
+import { PERU_LOCATIONS } from '../../datos/peruLocations';
 
 function EditPublicationModal({
     editingPublication,
@@ -28,18 +18,32 @@ function EditPublicationModal({
     const [price, setPrice] = useState('');
     const [tags, setTags] = useState([]);
     const [tagInput, setTagInput] = useState('');
+    const [region, setRegion] = useState('');
+    const [contactWithatsapp, setContactWhatsapp] = useState('');
 
     useEffect(() => {
         if (editingPublication) {
             setTitle(editingPublication.title || '');
             setDescription(editingPublication.description || '');
-            setDistrict(editingPublication.district || 'Cerro Colorado');
+            setDistrict(editingPublication.district || '');
             setLocation(editingPublication.location || editingPublication.neighborhood || '');
             setStatus(editingPublication.status || 'activo');
             setPrice(editingPublication.price ?? '');
             setTags(editingPublication.tags || []);
+            setRegion(editingPublication.region || '');
+
+            // 🚀 AUTOMATIZACIÓN DE TELÉFONO: Si empieza con 51 y tiene 11 dígitos, le quitamos el 51 para mostrar solo los 9 dígitos limpios
+            const rawPhone = String(editingPublication.contact_whatsapp || editingPublication.phone || '').replace(/\D/g, '');
+            const cleanPhone = (rawPhone.length === 11 && rawPhone.startsWith('51')) ? rawPhone.slice(2) : rawPhone;
+            setContactWhatsapp(cleanPhone);
         }
     }, [editingPublication]);
+
+    const handleCityChangeLocal = (e) => {
+        const selectedCity = e.target.value;
+        setRegion(selectedCity);
+        setDistrict('');
+    };
 
     const handleAddTag = () => {
         const cleaned = tagInput.trim().replace(/^#+/, '');
@@ -61,10 +65,13 @@ function EditPublicationModal({
     const handleRemoveTag = (tagToRemove) => {
         setTags(tags.filter((tag) => tag !== tagToRemove));
     };
-
     const handleSubmitLocal = (e) => {
         e.preventDefault();
-        
+
+        // 🚀 FORMATEO DE SALIDA DE TELÉFONO: Limpiamos y aseguramos que viaje con el 51 antes de enviar a Supabase
+        const rawPhone = contactWithatsapp.replace(/\D/g, '');
+        const formattedPhone = rawPhone.length === 9 ? `51${rawPhone}` : rawPhone;
+
         const updatedPublication = {
             ...editingPublication,
             title: title.trim(),
@@ -73,13 +80,14 @@ function EditPublicationModal({
             location: location.trim(),
             status,
             tags,
+            region,
+            contact_whatsapp: formattedPhone, // 🚀 Viaja formateado correctamente
             price: (editingPublication.type === 'catalogo' || editingPublication.type === 'producto') ? Number(price) : null,
         };
 
         onSave(updatedPublication);
     };
 
-    // Clases reducidas en tamaño para compactar la altura al máximo
     const inputClass =
         'w-full mt-1 rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs text-brand-dark outline-none focus:border-brand-accent transition-colors';
     const labelClass = 'block text-[11px] font-semibold text-brand-dark uppercase tracking-wider';
@@ -126,27 +134,56 @@ function EditPublicationModal({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                     <div>
-                        <label className={labelClass}>Distrito</label>
+                        <label className={labelClass}>Ciudad / Departamento</label>
                         <select
-                            value={district}
-                            onChange={(e) => setDistrict(e.target.value)}
+                            value={region}
+                            onChange={handleCityChangeLocal}
                             className={inputClass}
                             required
                         >
-                            {districtOptions.map((dist) => (
-                                <option key={dist} value={dist}>
-                                    {dist}
-                                </option>
+                            <option value="">Selecciona una ciudad</option>
+                            {Object.keys(PERU_LOCATIONS).map((city) => (
+                                <option key={city} value={city}>{city}</option>
                             ))}
                         </select>
                     </div>
 
                     <div>
-                        <label className={labelClass}>Dirección o zona</label>
+                        <label className={labelClass}>Distrito</label>
+                        <select
+                            value={district}
+                            onChange={(e) => setDistrict(e.target.value)}
+                            className={inputClass}
+                            disabled={!region}
+                            required
+                        >
+                            <option value="">{region ? 'Selecciona un distrito' : 'Primero elige una ciudad'}</option>
+                            {region &&
+                                PERU_LOCATIONS[region].map((dist) => (
+                                    <option key={dist} value={dist}>{dist}</option>
+                                ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>Dirección o referencia</label>
                         <input
                             type="text"
                             value={location}
                             onChange={(e) => setLocation(e.target.value)}
+                            className={inputClass}
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>WhatsApp de contacto</label>
+                        <input
+                            type="tel"
+                            value={contactWithatsapp}
+                            onChange={(e) => setContactWhatsapp(e.target.value)}
+                            placeholder="Ej. 946414833"
+                            maxLength="9"
                             className={inputClass}
                             required
                         />
