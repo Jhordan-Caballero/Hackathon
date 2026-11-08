@@ -70,8 +70,9 @@ function Registro() {
         }
     };
 
+    // Agregadas clases dark: para que el texto y fondo del select se adapten al modo oscuro
     const inputClass =
-        'w-full px-4 py-3 pl-11 rounded-xl border border-brand-border bg-brand-cream/50 text-sm outline-none focus:border-brand-accent transition-colors text-brand-dark';
+        'w-full px-4 py-3 pl-11 rounded-xl border border-brand-border dark:border-zinc-700 bg-brand-cream/50 dark:bg-zinc-800 text-sm outline-none focus:border-brand-accent transition-colors text-brand-dark dark:text-zinc-100';
     const labelClass = 'block text-sm font-semibold text-brand-dark mb-2';
 
     return (
@@ -125,9 +126,10 @@ function Registro() {
                         className={inputClass}
                         required
                     >
-                        <option value="">Selecciona una ciudad</option>
+                        {/* Agregadas clases dark:bg-zinc-900 y dark:text-zinc-200 para oscurecer las opciones del menú desplegable nativo */}
+                        <option value="" className="bg-white dark:bg-zinc-900 text-brand-dark dark:text-zinc-200">Selecciona una ciudad</option>
                         {Object.keys(PERU_LOCATIONS).map((city) => (
-                            <option key={city} value={city}>
+                            <option key={city} value={city} className="bg-white dark:bg-zinc-900 text-brand-dark dark:text-zinc-200">
                                 {city}
                             </option>
                         ))}
@@ -149,14 +151,15 @@ function Registro() {
                         disabled={!form.city}
                         required
                     >
-                        <option value="">
+                        {/* Agregadas clases dark:bg-zinc-900 y dark:text-zinc-200 para oscurecer las opciones del menú desplegable nativo */}
+                        <option value="" className="bg-white dark:bg-zinc-900 text-brand-dark dark:text-zinc-200">
                             {form.city
                                 ? 'Selecciona un distrito'
                                 : 'Primero elige una ciudad'}
                         </option>
                         {form.city &&
                             PERU_LOCATIONS[form.city].map((dist) => (
-                                <option key={dist} value={dist}>
+                                <option key={dist} value={dist} className="bg-white dark:bg-zinc-900 text-brand-dark dark:text-zinc-200">
                                     {dist}
                                 </option>
                             ))}
