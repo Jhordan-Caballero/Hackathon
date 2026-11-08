@@ -115,6 +115,7 @@ function AyudaVecinal() {
                 title="La ayuda comienza"
                 highlight="entre vecinos"
                 description="Comparte lo que necesitas, ofrece tu apoyo e intercambia recursos con las personas de tu comunidad."
+                heroImage="https://zdfuicwxrjafndzuappx.supabase.co/storage/v1/object/public/images/demo/hero-ayuda.jpg"
             />
 
             <Reveal>
@@ -143,17 +144,12 @@ function AyudaVecinal() {
             ) : filteredPublications.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {filteredPublications.map((publication, index) => (
-                        <Reveal
-                            key={publication.id}
-                            className={`transition-delay-${index % 3}`}
-                        >
-                            <PublicationCard
+                                                 <PublicationCard
                                 publication={publication}
                                 categoryLabel={publication.category || publication.category_id}
                                 typeLabel="Ayuda vecinal"
                                 onDetails={setSelectedPublication}
                             />
-                        </Reveal>
                     ))}
                 </div>
             ) : (

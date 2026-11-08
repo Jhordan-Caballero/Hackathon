@@ -13,7 +13,7 @@ function Catalog() {
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('todas');
     const [selectedCity, setSelectedCity] = useState('');
-    const [selectedLocation, setSelectedLocation] = useState('todas'); 
+    const [selectedLocation, setSelectedLocation] = useState('todas');
     const [selectedRating, setSelectedRating] = useState('todas');
     const [selectedPublication, setSelectedPublication] = useState(null);
 
@@ -129,6 +129,7 @@ function Catalog() {
                 title="Encuentra lo que necesitas"
                 highlight="cerca de ti"
                 description="Descubre productos, servicios y oficios ofrecidos por personas de tu vecindario."
+                heroImage="https://zdfuicwxrjafndzuappx.supabase.co/storage/v1/object/public/images/demo/hero-catalogo.jpg"
             />
 
             <Reveal>
@@ -157,17 +158,12 @@ function Catalog() {
             ) : filteredPublications.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {filteredPublications.map((publication, index) => (
-                        <Reveal
-                            key={publication.id}
-                            className={`transition-delay-${index % 3}`}
-                        >
-                            <PublicationCard
+                                                <PublicationCard
                                 publication={publication}
                                 categoryLabel={publication.category || publication.category_id}
                                 typeLabel="Producto o servicio"
                                 onDetails={setSelectedPublication}
                             />
-                        </Reveal>
                     ))}
                 </div>
             ) : (

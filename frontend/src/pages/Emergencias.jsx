@@ -101,6 +101,7 @@ function Emergencias() {
                 title="Ante una emergencia,"
                 highlight="nos ayudamos"
                 description="Comparte situaciones de emergencia de tu comunidad para mantener informados a los vecinos y promover una respuesta oportuna."
+                heroImage="https://zdfuicwxrjafndzuappx.supabase.co/storage/v1/object/public/images/demo/hero-emergencias.jpg"
             />
 
             <Reveal>
@@ -112,7 +113,7 @@ function Emergencias() {
                     onCityChange={setSelectedCity}
                     selectedZone={selectedLocation}
                     onZoneChange={setSelectedLocation}
-                    resultsCount={filteredEmergencies.length} 
+                    resultsCount={filteredEmergencies.length}
                 />
             </Reveal>
 
@@ -130,17 +131,12 @@ function Emergencias() {
             ) : filteredEmergencies.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {filteredEmergencies.map((emergency, index) => (
-                        <Reveal
-                            key={emergency.id}
-                            className={`transition-delay-${index % 3}`}
-                        >
                             <PublicationCard
-                                publication={emergency}
-                                categoryLabel={emergency.title}
-                                typeLabel="Emergencia"
-                                onDetails={setSelectedEmergency}
-                            />
-                        </Reveal>
+                            publication={emergency}
+                            categoryLabel={emergency.title}
+                            typeLabel="Emergencia"
+                            onDetails={setSelectedEmergency}
+                        />
                     ))}
                 </div>
             ) : (
