@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '../../lib/supabaseClient'
 
 function AIChatWidget({ onSend }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -27,36 +28,31 @@ function AIChatWidget({ onSend }) {
         setIsLoading(true);
 
         try {
-            if (onSend) {
-                const response = await onSend(text);
+                const { data, error } = await supabase.functions.invoke('chat', {
+                body: { message: text },
+                })
 
-                setMessages((prev) => [
-                    ...prev,
-                    {
-                        role: 'assistant',
-                        content: response || 'No recibí una respuesta.',
-                    },
-                ]);
-            } else {
-                setMessages((prev) => [
-                    ...prev,
-                    {
-                        role: 'assistant',
-                        content: 'El asistente todavía está pendiente de conexión con el backend.',
-                    },
-                ]);
-            }
-        } catch (error) {
-            setMessages((prev) => [
-                ...prev,
-                {
-                    role: 'assistant',
-                    content: 'Ocurrió un problema. Inténtalo nuevamente.',
-                },
-            ]);
-        } finally {
-            setIsLoading(false);
-        }
+        if (error) throw error
+
+             setMessages((prev) => [
+          ...prev,
+         {
+           role: 'assistant',
+       content: data?.reply || 'No recibí una respuesta.',
+     },
+        ])
+            } catch (error) {
+         console.error('Error del asistente:', error)
+         setMessages((prev) => [
+           ...prev,
+          {
+            role: 'assistant',
+           content: 'El asistente está ocupado, intenta de nuevo en unos segundos.',
+      },
+    ])
+} finally {
+  setIsLoading(false)
+}
     };
 
     return (
