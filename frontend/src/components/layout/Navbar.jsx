@@ -59,9 +59,7 @@ function Navbar() {
             <div className="max-w-7xl mx-auto px-5 lg:px-10 h-20 flex items-center justify-between gap-4">
 
                 <div className="shrink-0 flex items-center">
-                    <Link to="/" onClick={closeMenu} className="flex items-center">
-                        <BrandLogo />
-                    </Link>
+                    <BrandLogo />
                 </div>
 
                 <nav className="hidden lg:flex items-center gap-7 px-7 py-3 rounded-full bg-white border border-brand-border text-sm font-semibold shadow-sm">

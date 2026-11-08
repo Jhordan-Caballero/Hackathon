@@ -7,7 +7,6 @@ import SectionHero from '../components/shared/SectionHero';
 import EmptyState from '../components/ui/EmptyState';
 import SearchBar from '../components/shared/SearchBar';
 import PromotionalBanner from '../components/shared/PromotionalBanner';
-// Importamos el cliente de Supabase listo
 import { supabase } from '../supabaseClient';
 
 function Catalog() {
@@ -17,25 +16,39 @@ function Catalog() {
     const [selectedRating, setSelectedRating] = useState('todas');
     const [selectedPublication, setSelectedPublication] = useState(null);
 
-    // Estado real para almacenar los datos que vienen del backend
     const [publications, setPublications] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Jalamos los datos desde Supabase en tiempo real al montar el componente
     useEffect(() => {
         async function fetchPublications() {
             setLoading(true);
             try {
                 const { data, error } = await supabase
                     .from('publications')
-                    .select('*')
+                    .select(`
+                        *,
+                        profiles (
+                            full_name,
+                            whatsapp
+                        )
+                    `)
                     .order('created_at', { ascending: false });
 
                 if (error) {
                     console.error("Error al traer publicaciones de Supabase:", error.message);
                     return;
                 }
-                setPublications(data || []);
+
+                // Mapeamos los resultados para inyectar limpiamente 'provider' y 'phone' en tus componentes
+                const formattedData = (data || []).map(pub => ({
+                    ...pub,
+                    provider: pub.profiles?.full_name || 'Vecino anónimo',
+                    phone: pub.contact_whatsapp || pub.profiles?.whatsapp || '',
+                    // Si tu imagen está en la base de datos como una lista o string, aseguramos compatibilidad
+                    image: Array.isArray(pub.image_urls) ? pub.image_urls[0] : pub.image_urls
+                }));
+
+                setPublications(formattedData);
             } catch (err) {
                 console.error("Error inesperado:", err);
             } finally {
@@ -45,13 +58,11 @@ function Catalog() {
         fetchPublications();
     }, []);
 
-    // Obtener ubicaciones disponibles dinámicamente desde la BD real
     const locations = useMemo(() => {
         const locs = publications.map((publication) => publication.location || publication.neighborhood);
         return [...new Set(locs.filter(Boolean))];
     }, [publications]);
 
-    // Tu lógica original exacta de filtrado adaptada a la data real
     const filteredPublications = useMemo(() => {
         return publications.filter((publication) => {
             const searchText = search.toLowerCase().trim();
@@ -80,8 +91,7 @@ function Catalog() {
                 selectedRating === 'todas' ||
                 (publication.rating ?? 5) >= Number(selectedRating);
 
-            const matchesStatus = publication.status !== 'inactivo';
-
+            const matchesStatus = !publication.description?.includes('[OCULTO]'); 
             return (
                 matchesSearch &&
                 matchesCategory &&
@@ -110,7 +120,6 @@ function Catalog() {
                 description="Descubre productos, servicios y oficios ofrecidos por personas de tu vecindario."
             />
 
-            {/* Buscador y filtros originales */}
             <Reveal>
                 <SearchBar
                     search={search}
@@ -122,14 +131,12 @@ function Catalog() {
                 />
             </Reveal>
 
-            {/* Encabezado de resultados */}
             <div className="flex items-center justify-between mb-5">
                 <h3 className="font-serif text-2xl text-brand-dark">
                     Productos y servicios
                 </h3>
             </div>
 
-            {/* Listado dinámico basado en la carga de Supabase */}
             {loading ? (
                 <div className="text-center py-20">
                     <p className="text-brand-muted animate-pulse text-sm">Cargando catálogo comunitario desde Supabase...</p>
@@ -156,14 +163,12 @@ function Catalog() {
                 />
             )}
 
-            {/* Modal de detalles original */}
             <PublicationDetail
                 publication={selectedPublication}
                 onClose={() => setSelectedPublication(null)}
                 variant="catalog"
             />
 
-            {/* Banner de invitación original */}
             <Reveal>
                 <PromotionalBanner
                     title="¿Tienes algún producto o servicio para ofrecer?"

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { 
-    FiUser, 
-    FiBox, 
-    FiHeart, 
+import {
+    FiUser,
+    FiBox,
+    FiHeart,
     FiAlertTriangle,
-    FiEdit2, 
-    FiTrash2, 
-    FiLogOut 
+    FiEdit2,
+    FiTrash2,
+    FiLogOut
 } from 'react-icons/fi';
 
 import Button from '../components/ui/Button';
@@ -14,7 +14,7 @@ import PublicationCard from '../components/shared/PublicationCard';
 import PublicationDetail from '../components/shared/PublicationDetail';
 import EditPublicationModal from '../components/shared/EditPublicationModal';
 import EditProfileModal from '../components/shared/EditProfileModal';
-import { supabase } from '../supabaseClient'; 
+import { supabase } from '../supabaseClient';
 
 const PROFILE_KEY = 'community-profile';
 
@@ -47,6 +47,7 @@ function Perfil() {
         }
         return phone;
     };
+
     useEffect(() => {
         const savedProfile = localStorage.getItem(PROFILE_KEY);
         if (savedProfile) {
@@ -60,9 +61,9 @@ function Perfil() {
         }
     }, []);
 
-
+    // CONSULTA REAL: Trae las publicaciones asociadas al user_id de este perfil
     useEffect(() => {
-        if (!profile) return;
+        if (!profile?.id) return;
 
         async function fetchMyPublications() {
             setLoadingPublications(true);
@@ -70,22 +71,22 @@ function Perfil() {
                 const { data, error } = await supabase
                     .from('publications')
                     .select('*')
-                    .or(`phone.eq.${profile.whatsapp},provider.eq.${profile.full_name}`)
+                    .eq('user_id', profile.id) // Filtramos por tu ID único de Supabase
                     .order('created_at', { ascending: false });
 
                 if (!error) {
                     setPublications(data || []);
                 }
             } catch (err) {
-                console.error(err);
-            } finally {
+                console.error("Error cargando tus publicaciones:", err);
+            } {
                 setLoadingPublications(false);
             }
         }
 
         fetchMyPublications();
     }, [profile]);
-      const saveProfile = async (newProfileData) => {
+    const saveProfile = async (newProfileData) => {
         try {
             if (profile?.id) {
                 const { data, error } = await supabase
@@ -105,22 +106,19 @@ function Perfil() {
                     return;
                 }
 
-                // FIX CRUCIAL: Supabase devuelve una lista, extraemos el objeto real [0]
                 const updatedUser = Array.isArray(data) ? data[0] : data;
-                
                 setProfile(updatedUser);
                 localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedUser));
             } else {
                 setProfile(newProfileData);
                 localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfileData));
             }
-            window.dispatchEvent(new Event('storage-update')); 
+            window.dispatchEvent(new Event('storage-update'));
             setIsEditingProfile(false);
         } catch (err) {
             alert('Error inesperado al guardar los cambios.');
         }
     };
-
 
     const openEditPublication = (publication) => {
         setEditingPublication(publication);
@@ -140,41 +138,67 @@ function Perfil() {
         setEditForm((prev) => ({ ...prev, [name]: value }));
     };
 
-    const savePublication = async (event) => {
-        event.preventDefault();
+    // Guarda los cambios editados de la publicación directo en Supabase
+    const savePublication = async (updatedPub) => {
         try {
+            // Limpiamos descripciones viejas por si acaso
+            let cleanDesc = updatedPub.description.replace(' [OCULTO]', '');
+
+            // Si el usuario eligió Oculto / Inactivo, le sumamos el tag secreto al final
+            const finalDescription = updatedPub.status === 'inactivo'
+                ? `${cleanDesc} [OCULTO]`
+                : cleanDesc;
+
             const { error } = await supabase
                 .from('publications')
                 .update({
-                    title: editForm.title,
-                    description: editForm.description,
-                    district: editForm.district,
-                    location: editForm.location,
-                    price: editingPublication.type === 'catalogo' ? Number(editForm.price) : null,
-                    status: editForm.status
+                    title: updatedPub.title,
+                    description: finalDescription, // Guardamos la bandera aquí de forma segura
+                    district: updatedPub.district,
+                    location: updatedPub.location,
+                    price: updatedPub.price,
+                    tags: updatedPub.tags
+                    // 🚫 NUNCA MÁS ENVIAMOS LA COLUMNA STATUS AQUÍ (Evita el check constraint)
                 })
-                .eq('id', editingPublication.id);
+                .eq('id', updatedPub.id);
 
             if (!error) {
-                setPublications(prev => prev.map(pub => pub.id === editingPublication.id ? { ...pub, ...editForm, price: pub.type === 'catalogo' ? Number(editForm.price) : null } : pub));
+                // Sincronizamos localmente el objeto modificado para que el Perfil se entere al instante
+                const localUpdated = {
+                    ...updatedPub,
+                    description: finalDescription,
+                    status: updatedPub.status // Mantiene 'inactivo' o 'activo' en la interfaz
+                };
+
+                setPublications(prev => prev.map(pub => pub.id === updatedPub.id ? localUpdated : pub));
                 setEditingPublication(null);
+            } else {
+                alert(`Error en Supabase: ${error.message}`);
             }
         } catch (err) {
             console.error(err);
         }
     };
 
+
     const deletePublication = async (publication) => {
         if (!window.confirm(`¿Estás seguro de eliminar "${publication.title}"?`)) return;
         try {
-            const { error } = await supabase.from('publications').delete().eq('id', publication.id);
-            if (!error) setPublications(prev => prev.filter(item => item.id !== publication.id));
+            const { error } = await supabase
+                .from('publications')
+                .delete()
+                .eq('id', publication.id);
+
+            if (!error) {
+                setPublications(prev => prev.filter(item => item.id !== publication.id));
+            }
         } catch (err) {
             console.error(err);
         }
     };
 
-    const myPublications = publications.filter((pub) => pub.type === 'catalogo');
+    // FIX MÁGICO: Filtramos por los tipos string reales que guarda tu formulario de Supabase
+    const myPublications = publications.filter((pub) => pub.type === 'producto' || pub.type === 'catalogo');
     const myRequests = publications.filter((pub) => pub.type === 'ayuda' || pub.type === 'intercambio');
     const myEmergencies = publications.filter((pub) => pub.type === 'emergencia');
 
@@ -183,8 +207,10 @@ function Perfil() {
         profile.district,
         profile.region
     ].filter(Boolean).join(', ') : 'Cargando ubicación...';
+
     const renderPublicationList = (items, emptyMessage, createHref) => {
-        if (loadingPublications) return <p className="text-sm text-brand-muted animate-pulse py-6">Cargando publicaciones...</p>;
+        if (loadingPublications) return <p className="text-sm text-brand-muted animate-pulse py-6">Cargando tus anuncios reales...</p>;
+
         if (items.length === 0) {
             return (
                 <div className="bg-white border border-brand-border rounded-2xl p-10 md:p-12 text-center flex flex-col items-center justify-center">
@@ -199,11 +225,23 @@ function Perfil() {
         return (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {items.map((publication) => (
-                    <div key={publication.id} className="flex flex-col">
+                    <div key={publication.id} className="flex flex-col relative">
+                        <div className="absolute top-3 left-3 z-10">
+                            {publication.description?.includes('[OCULTO]') ? (
+                                <span className="bg-red-100 text-red-800 text-[10px] font-bold px-2.5 py-1 rounded-full border border-red-200 shadow-sm">
+                                    ● Oculto / Inactivo
+                                </span>
+                            ) : (
+                                <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2.5 py-1 rounded-full border border-green-200 shadow-sm">
+                                    ● Visible / Activo
+                                </span>
+                            )}
+                        </div>
+
                         <PublicationCard
                             publication={publication}
                             categoryLabel={publication.category}
-                            typeLabel={publication.typeLabel}
+                            typeLabel={publication.type}
                             onDetails={setSelectedPublication}
                         />
                         <div className="grid grid-cols-2 gap-2 mt-3">
@@ -307,8 +345,11 @@ function Perfil() {
 
             <PublicationDetail publication={selectedPublication} onClose={() => setSelectedPublication(null)} variant="help" />
             <EditProfileModal profile={profile} isOpen={isEditingProfile} onClose={() => setIsEditingProfile(false)} onSave={saveProfile} />
-            <EditPublicationModal editingPublication={editingPublication} editForm={editForm} onClose={() => setEditingPublication(null)} onChange={handleEditChange} onSubmit={savePublication} />
-        </section>
+            <EditPublicationModal
+                editingPublication={editingPublication}
+                onClose={() => setEditingPublication(null)}
+                onSave={savePublication}
+            />        </section>
     );
 }
 
