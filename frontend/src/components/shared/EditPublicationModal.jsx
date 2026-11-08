@@ -1,90 +1,218 @@
+import { useState, useEffect } from 'react';
+import { FiPlus, FiX, FiAlertTriangle } from 'react-icons/fi';
 import FormModalOrCard from '../forms/FormModalOrCard';
+import { PERU_LOCATIONS } from '../../datos/peruLocations';
 
 function EditPublicationModal({
     editingPublication,
-    editForm,
     onClose,
-    onChange,
-    onSubmit,
+    onSave,
 }) {
     if (!editingPublication) return null;
 
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [district, setDistrict] = useState('');
+    const [location, setLocation] = useState('');
+    const [status, setStatus] = useState('activo');
+    const [price, setPrice] = useState('');
+    const [tags, setTags] = useState([]);
+    const [tagInput, setTagInput] = useState('');
+    const [region, setRegion] = useState('');
+    const [contactWithatsapp, setContactWhatsapp] = useState('');
+
+    useEffect(() => {
+        if (editingPublication) {
+            setTitle(editingPublication.title || '');
+            setDescription(editingPublication.description || '');
+            setDistrict(editingPublication.district || '');
+            setLocation(editingPublication.location || editingPublication.neighborhood || '');
+            setStatus(editingPublication.status || 'activo');
+            
+            // Forzamos a que el precio cargado se formatee inicialmente con sus dos decimales estables .00
+            if (editingPublication.price != null) {
+                setPrice(Number(editingPublication.price).toFixed(2));
+            } else {
+                setPrice('');
+            }
+            
+            setTags(editingPublication.tags || []);
+            setRegion(editingPublication.region || '');
+
+            const rawPhone = String(editingPublication.contact_whatsapp || editingPublication.phone || '').replace(/\D/g, '');
+            const cleanPhone = (rawPhone.length === 11 && rawPhone.startsWith('51')) ? rawPhone.slice(2) : rawPhone;
+            setContactWhatsapp(cleanPhone);
+        }
+    }, [editingPublication]);
+
+    const handleCityChangeLocal = (e) => {
+        const selectedCity = e.target.value;
+        setRegion(selectedCity);
+        setDistrict('');
+    };
+
+    const handleAddTag = () => {
+        const cleaned = tagInput.trim().replace(/^#+/, '');
+        if (!cleaned) return;
+        const formattedTag = `#${cleaned}`;
+        if (!tags.includes(formattedTag)) {
+            setTags([...tags, formattedTag]);
+        }
+        setTagInput('');
+    };
+
+    const handleKeyDownTag = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddTag();
+        }
+    };
+
+    const handleRemoveTag = (tagToRemove) => {
+        setTags(tags.filter((tag) => tag !== tagToRemove));
+    };
+    const handleSubmitLocal = (e) => {
+        e.preventDefault();
+        const cleanPhone = contactWithatsapp.replace(/\D/g, '');
+
+        const updatedPublication = {
+            ...editingPublication,
+            title: title.trim(),
+            description: description.trim(),
+            district,
+            location: location.trim(),
+            status,
+            tags,
+            region,
+            contact_whatsapp: cleanPhone, 
+            price: (editingPublication.type === 'catalogo' || editingPublication.type === 'producto') ? parseFloat(price) || 0 : null,
+        };
+
+        onSave(updatedPublication);
+    };
+
     const inputClass =
-        'w-full mt-1.5 rounded-xl border border-brand-border bg-white px-4 py-2.5 text-sm text-brand-dark outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 transition-colors';
-    const labelClass = 'block text-xs font-semibold text-brand-dark uppercase tracking-wider';
+        'w-full mt-1 rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs text-brand-dark outline-none focus:border-brand-accent transition-colors';
+    const labelClass = 'block text-[10px] font-bold text-brand-dark uppercase tracking-wider';
 
     return (
         <FormModalOrCard
             title="Editar publicación"
-            subtitle="Modifica los campos que necesites."
-            onSubmit={onSubmit}
+            subtitle="Modifica los campos necesarios."
+            onSubmit={handleSubmitLocal} 
             onClose={onClose}
             submitText="Guardar cambios"
+            maxWidth="max-w-md sm:max-w-2xl" 
         >
-            <div>
-                <label className={labelClass}>Título</label>
-                <input
-                    type="text"
-                    name="title"
-                    value={editForm.title}
-                    onChange={onChange}
-                    className={inputClass}
-                    required
-                />
-            </div>
+            <div className="max-h-[52vh] sm:max-h-none overflow-y-auto px-1 pb-1 space-y-2.5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-brand-accent/20 [&::-webkit-scrollbar-thumb]:rounded-full">
+                
+                {editingPublication.type === 'emergencia' && (
+                    <div className="rounded-xl bg-amber-50/80 border border-amber-200 p-2 text-amber-950 text-[10px]">
+                        <p className="leading-tight font-medium">⚠️ Este reporte alerta directamente a los vecinos de tu zona.</p>
+                    </div>
+                )}
 
-            <div>
-                <label className={labelClass}>Descripción</label>
-                <textarea
-                    name="description"
-                    value={editForm.description}
-                    onChange={onChange}
-                    className={`${inputClass} min-h-28 resize-y`}
-                    required
-                />
-            </div>
-
-            <div>
-                <label className={labelClass}>Ubicación</label>
-                <input
-                    type="text"
-                    name="location"
-                    value={editForm.location}
-                    onChange={onChange}
-                    className={inputClass}
-                    required
-                />
-            </div>
-
-            {/* Selector de Estado Activo / Inactivo */}
-            <div>
-                <label className={labelClass}>Estado de visibilidad</label>
-                <select
-                    name="status"
-                    value={editForm.status || 'activo'}
-                    onChange={onChange}
-                    className={inputClass}
-                >
-                    <option value="activo">Activo (Visible en el vecindario)</option>
-                    <option value="inactivo">Inactivo (Oculto)</option>
-                </select>
-            </div>
-
-            {editingPublication.type === 'catalogo' && (
                 <div>
-                    <label className={labelClass}>Precio (S/)</label>
-                    <input
-                        type="number"
-                        name="price"
-                        value={editForm.price}
-                        onChange={onChange}
-                        className={inputClass}
-                        min="0"
-                        step="0.01"
-                        required
-                    />
+                    <label className={labelClass}>Título de la publicación</label>
+                    <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} required />
                 </div>
-            )}
+
+                <div>
+                    <label className={labelClass}>Descripción o detalles</label>
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClass} min-h-[44px] max-h-20 resize-y`} required />
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                    <div>
+                        <label className={labelClass}>Ciudad</label>
+                        <select value={region} onChange={handleCityChangeLocal} className={inputClass} required>
+                            <option value="">Selecciona</option>
+                            {Object.keys(PERU_LOCATIONS).map((city) => (
+                                <option key={city} value={city}>{city}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>Distrito</label>
+                        <select value={district} onChange={(e) => setDistrict(e.target.value)} className={inputClass} disabled={!region} required>
+                            <option value="">{region ? 'Elige' : 'Ciudad'}</option>
+                            {region && PERU_LOCATIONS[region].map((dist) => (
+                                <option key={dist} value={dist}>{dist}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>Dirección o referencia</label>
+                        <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className={inputClass} required />
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>WhatsApp</label>
+                        <input type="tel" value={contactWithatsapp} onChange={(e) => setContactWhatsapp(e.target.value)} placeholder="Ej. 946414833" maxLength="9" className={inputClass} required />
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>Estado</label>
+                        <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputClass}>
+                            <option value="activo">Activo</option>
+                            <option value="inactivo">Oculto</option>
+                        </select>
+                    </div>
+
+                    {(editingPublication.type === 'catalogo' || editingPublication.type === 'producto') && (
+                        <div>
+                            <label className={labelClass}>Precio (S/)</label>
+                            <input 
+                                type="text" 
+                                value={price} 
+                                onChange={(e) => {
+                                    let val = e.target.value.replace(/[^0-9.]/g, '');
+                                    
+                                    if (!val) {
+                                        setPrice('');
+                                        return;
+                                    }
+
+                                    if (val && !val.includes('.')) {
+                                        setPrice(`${val}.00`);
+                                        return;
+                                    }
+
+                                    const split = val.split('.');
+                                    if (split[1] && split[1].length > 2) {
+                                        val = `${split[0]}.${split[1].slice(0, 2)}`;
+                                    }
+                                    setPrice(val);
+                                }} 
+                                inputMode="decimal"
+                                className={inputClass} 
+                                required 
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <div>
+                    <label className={labelClass}>Etiquetas (#)</label>
+                    <div className="flex gap-2 mt-1">
+                        <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleKeyDownTag} placeholder="Presiona Enter" className="w-full rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs outline-none focus:border-brand-accent" />
+                        <button type="button" onClick={handleAddTag} className="px-3 bg-brand-accent text-white rounded-xl hover:bg-brand-accent-hover flex items-center justify-center text-xs font-bold"><FiPlus /></button>
+                    </div>
+
+                    {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5 max-h-10 overflow-y-auto">
+                            {tags.map((tag) => (
+                                <span key={tag} className="inline-flex items-center gap-1 bg-brand-soft text-brand-accent text-[10px] font-semibold px-2 py-0.5 rounded-full border border-brand-border/60">
+                                    {tag}
+                                    <button type="button" onClick={() => handleRemoveTag(tag)} className="hover:text-red-600 transition-colors"><FiX className="text-[9px]" /></button>
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
         </FormModalOrCard>
     );
 }

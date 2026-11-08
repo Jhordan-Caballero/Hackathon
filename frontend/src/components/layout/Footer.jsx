@@ -1,20 +1,22 @@
+import { Link } from 'react-router-dom';
 import BrandLogo from '../layout/BrandLogo';
 
+// 🚀 BLOQUES DE CONTENIDO REALES: Enlazados directamente a tus pestañas y servicios comunitarios
 const footerGroups = [
     {
-        title: '[BLOQUE DE CONTENIDO]',
+        title: 'Navegación',
         links: [
-            '[enlace de navegación]',
-            '[enlace de navegación]',
-            '[enlace de navegación]',
+            { label: 'Catálogo', to: '/' },
+            { label: 'Ayuda Vecinal', to: '/ayuda-vecinal' },
+            { label: 'Emergencias', to: '/emergencias' },
         ],
     },
     {
-        title: '[BLOQUE DE CONTENIDO]',
+        title: 'Comunidad',
         links: [
-            '[enlace de navegación]',
-            '[enlace de navegación]',
-            '[enlace de navegación]',
+            { label: 'Mi Perfil', to: '/perfil' },
+            { label: 'Crear Publicación', to: '/publicar' },
+            { label: 'Centro de Alertas', to: '/emergencias' },
         ],
     },
 ];
@@ -35,11 +37,11 @@ function Footer() {
                         </div>
 
                         <p className="text-brand-muted text-sm max-w-sm font-light leading-relaxed">
-                            [texto de pie de página]
+                            Una plataforma vecinal unificada diseñada para fomentar la colaboración, el comercio local y la prevención comunitaria en tu distrito.
                         </p>
                     </div>
 
-                    {/* Grupos de navegación */}
+                    {/* Grupos de navegación dinámicos */}
                     {footerGroups.map((group, index) => (
                         <div key={index} className="md:col-span-2">
 
@@ -50,31 +52,31 @@ function Footer() {
                             <ul className="space-y-3 text-xs text-brand-muted font-light">
                                 {group.links.map((link, linkIndex) => (
                                     <li key={linkIndex}>
-                                        <a
-                                            href="#"
+                                        {/* Cambiamos las etiquetas 'a' por 'Link' de react-router para navegación nativa sin recargar */}
+                                        <Link
+                                            to={link.to}
                                             className="hover:text-brand-dark transition-colors"
                                         >
-                                            {link}
-                                        </a>
+                                            {link.label}
+                                        </Link>
                                     </li>
                                 ))}
                             </ul>
                         </div>
                     ))}
-
                     {/* Información adicional */}
                     <div className="md:col-span-4">
 
                         <h4 className="text-xs font-bold uppercase tracking-wider text-brand-dark mb-4">
-                            [BLOQUE DE CONTENIDO]
+                            Soporte y Prevención
                         </h4>
 
                         <p className="text-xs text-brand-muted font-light leading-relaxed mb-3">
-                            [subtítulo o texto descriptivo breve]
+                            ¿Observas una situación de riesgo en tu barrio?
                         </p>
 
                         <p className="text-xs text-brand-muted font-light leading-relaxed">
-                            [texto de pie de página]
+                            Reporta imprevistos rápidamente desde la pestaña de emergencias para alertar a los miembros de tu comunidad en tiempo real.
                         </p>
                     </div>
                 </div>
@@ -83,17 +85,17 @@ function Footer() {
                 <div className="pt-8 border-t border-brand-border/70 flex flex-col sm:flex-row items-center justify-between text-xs text-brand-muted font-light gap-4">
 
                     <div>
-                        [texto de pie de página]
+                        © {new Date().getFullYear()} Red Vecinal Cohesiva. Todos los derechos reservados.
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <a href="#" className="hover:text-brand-dark transition-colors">
-                            [enlace de navegación]
-                        </a>
+                        <Link to="/" className="hover:text-brand-dark transition-colors">
+                            Términos de servicio
+                        </Link>
 
-                        <a href="#" className="hover:text-brand-dark transition-colors">
-                            [enlace de navegación]
-                        </a>
+                        <Link to="/" className="hover:text-brand-dark transition-colors">
+                            Política de privacidad
+                        </Link>
                     </div>
 
                 </div>

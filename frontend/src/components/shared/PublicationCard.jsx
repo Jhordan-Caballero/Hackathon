@@ -8,6 +8,14 @@ function PublicationCard({
 }) {
    const hasPrice = publication.type === 'catalogo' || (publication.price !== null && publication.price !== undefined);
 
+   // Fallbacks para asegurar que siempre se muestren distrito y ciudad
+   const city = publication.city || 'Arequipa';
+   const district = publication.district || 'Cerro Colorado';
+   const location = publication.location || '';
+
+   // Combina Dirección, Distrito y Ciudad en una sola línea
+   const fullLocation = [location, district, city].filter(Boolean).join(', ');
+
    return (
       <article className="h-full flex flex-col bg-white rounded-2xl overflow-hidden border border-brand-border shadow-sm hover:shadow-card transition-all duration-300">
 
@@ -20,12 +28,13 @@ function PublicationCard({
                className="rounded-none"
             />
 
-            {/* Badge de precio condicional (solo si tiene precio) */}
+            {/* Badge de precio */}
             {hasPrice && (
                <span className="absolute top-3 right-3 bg-brand-dark text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-md">
-                  S/ {Number(publication.price).toFixed(2)}
+                  Desde: S/ {Number(publication.price).toFixed(2)}
                </span>
             )}
+
          </div>
 
          {/* Información */}
@@ -37,11 +46,13 @@ function PublicationCard({
             </h3>
 
             {/* Descripción */}
+            {/* 🚀 REEMPLÁZALA POR ESTA VERSIÓN PARA REMOVER EL [OCULTO] EN PANTALLA */}
             <p className="text-xs text-brand-muted leading-relaxed line-clamp-3 mb-4">
-               {publication.description}
+               {publication.description?.replace(' [OCULTO]', '')}
             </p>
 
-            {/* Hashtags para búsqueda */}
+
+            {/* Hashtags */}
             <div className="flex flex-wrap gap-1.5 mb-4">
                {publication.tags?.map((tag) => (
                   <span
@@ -53,15 +64,15 @@ function PublicationCard({
                ))}
             </div>
 
-            {/* Vecino y ubicación */}
+            {/* Vecino y Ubicación completa en una sola línea */}
             <div className="flex items-center justify-between gap-2 border-t border-brand-border pt-3 mb-4 mt-auto">
-               <span className="text-xs font-semibold text-brand-dark">
+               <span className="text-xs font-semibold text-brand-dark shrink-0">
                   {publication.provider}
                </span>
 
-               <span className="flex items-center gap-1 text-[10px] text-brand-muted">
+               <span className="flex items-center gap-1 text-[10px] text-brand-muted truncate max-w-[60%]" title={fullLocation}>
                   <HiOutlineLocationMarker className="text-sm text-brand-muted shrink-0" />
-                  {publication.location}
+                  <span className="truncate">{fullLocation}</span>
                </span>
             </div>
 

@@ -1,5 +1,4 @@
-
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 import Reveal from '../components/ui/Reveal';
 import PublicationCard from '../components/shared/PublicationCard';
@@ -8,188 +7,108 @@ import SectionHero from '../components/shared/SectionHero';
 import SearchBar from '../components/shared/SearchBar';
 import EmptyState from '../components/ui/EmptyState';
 import PromotionalBanner from '../components/shared/PromotionalBanner';
-
-// Categorías de emergencias
-const categories = [
-    { id: 'todas', label: 'Todas', icon: '✹' },
-    { id: 'salud', label: 'Salud', icon: '🚑' },
-    { id: 'incendio', label: 'Incendios', icon: '🔥' },
-    { id: 'seguridad', label: 'Seguridad', icon: '🚨' },
-    { id: 'accidente', label: 'Accidentes', icon: '🚗' },
-    { id: 'servicios', label: 'Servicios básicos', icon: '⚡' },
-    { id: 'otros', label: 'Otros', icon: '⚠️' },
-];
-
-// Datos de ejemplo
-const emergencies = [
-    {
-        id: 1,
-        estado: 'emergencia',
-        type: 'emergencia',
-        typeLabel: 'Emergencia',
-        categoryId: 'incendio',
-        category: 'Incendios',
-        icon: '🔥',
-        title: 'Incendio en vivienda',
-        description:
-            'Se observa humo y fuego en una vivienda cercana. Los vecinos solicitan apoyo para atender la situación.',
-        provider: 'Carlos R.',
-        location: 'Sector Las Palmas',
-        phone: '51987654321',
-        date: 'Hace 20 minutos',
-        image: null,
-        tags: ['#Incendio', '#Urgente', '#Seguridad'],
-    },
-    {
-        id: 2,
-        estado: 'emergencia',
-        type: 'emergencia',
-        typeLabel: 'Emergencia',
-        categoryId: 'salud',
-        category: 'Salud',
-        icon: '🚑',
-        title: 'Solicitud de atención médica',
-        description:
-            'Una persona adulta mayor necesita atención médica debido a que presenta dificultades para respirar.',
-        provider: 'María L.',
-        location: 'Sector 1',
-        phone: '51987654322',
-        date: 'Hace 45 minutos',
-        image: null,
-        tags: ['#Salud', '#AtenciónMédica', '#Urgente'],
-    },
-    {
-        id: 3,
-        estado: 'emergencia',
-        type: 'emergencia',
-        typeLabel: 'Emergencia',
-        categoryId: 'accidente',
-        category: 'Accidentes',
-        icon: '🚗',
-        title: 'Accidente de tránsito',
-        description:
-            'Se produjo un accidente entre dos vehículos. Se solicita apoyo para atender a las personas involucradas.',
-        provider: 'José M.',
-        location: 'Calle Los Aromos',
-        phone: '51987654323',
-        date: 'Hace 1 hora',
-        image: null,
-        tags: ['#Accidente', '#Tránsito', '#Precaución'],
-    },
-    {
-        id: 4,
-        estado: 'emergencia',
-        type: 'emergencia',
-        typeLabel: 'Emergencia',
-        categoryId: 'seguridad',
-        category: 'Seguridad',
-        icon: '🚨',
-        title: 'Robo reportado en la zona',
-        description:
-            'Vecinos reportan un robo ocurrido cerca del parque principal. Se recomienda tomar precauciones.',
-        provider: 'Rosa M.',
-        location: 'Sector 2',
-        phone: '51987654324',
-        date: 'Hace 2 horas',
-        image: null,
-        tags: ['#Seguridad', '#Robo', '#Vecinos'],
-    },
-    {
-        id: 5,
-        estado: 'emergencia',
-        type: 'emergencia',
-        typeLabel: 'Emergencia',
-        categoryId: 'servicios',
-        category: 'Servicios básicos',
-        icon: '⚡',
-        title: 'Cable eléctrico caído',
-        description:
-            'Se encuentra un cable eléctrico caído en plena vía pública. Se solicita mantener distancia y reportar el peligro.',
-        provider: 'Miguel P.',
-        location: 'Calle Los Pinos',
-        phone: '51987654325',
-        date: 'Hace 3 horas',
-        image: null,
-        tags: ['#Electricidad', '#Peligro', '#Prevención'],
-    },
-    {
-        id: 6,
-        estado: 'emergencia',
-        type: 'emergencia',
-        typeLabel: 'Emergencia',
-        categoryId: 'otros',
-        category: 'Otros',
-        icon: '⚠️',
-        title: 'Poste en riesgo de caída',
-        description:
-            'Un poste presenta daños y parece estar a punto de caer. Se solicita apoyo para evitar posibles accidentes.',
-        provider: 'Elena G.',
-        location: 'Sector Las Palmas',
-        phone: '51987654326',
-        date: 'Ayer',
-        image: null,
-        tags: ['#Infraestructura', '#Peligro', '#Prevención'],
-    },
-];
+import { supabase } from '../supabaseClient';
 
 function Emergencias() {
     const [search, setSearch] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('todas');
+    const [selectedCity, setSelectedCity] = useState('');
     const [selectedLocation, setSelectedLocation] = useState('todas');
     const [selectedEmergency, setSelectedEmergency] = useState(null);
 
-    // Obtener ubicaciones disponibles
-    const locations = useMemo(
-        () => [
-            ...new Set(
-                emergencies.map((emergency) => emergency.location)
-            ),
-        ],
-        []
-    );
+    // Estados reales para Supabase
+    const [publications, setPublications] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Filtrar emergencias
+    // Jalamos los datos reales desde la vista o tabla filtrando por 'comunidad' y 'emergency_support'
+    useEffect(() => {
+        async function fetchEmergencies() {
+            setLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('publications')
+                    .select(`
+                        *,
+                        profiles (
+                            full_name,
+                            whatsapp
+                        )
+                    `)
+                    .eq('section', 'comunidad') // 🚀 Trae lo social del SQL
+                    .eq('emergency_support', true) // 🚀 FILTRA SOLAMENTE LAS EMERGENCIAS REALES
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error("Error al traer emergencias:", error.message);
+                    return;
+                }
+
+                const formattedData = (data || []).map(pub => ({
+                    ...pub,
+                    provider: pub.profiles?.full_name || 'Vecino alerta',
+                    phone: pub.contact_whatsapp || pub.profiles?.whatsapp || '',
+                    image: Array.isArray(pub.image_urls) ? pub.image_urls[0] : pub.image_urls,
+                    typeLabel: 'Emergencia'
+                }));
+
+                setPublications(formattedData);
+            } catch (err) {
+                console.error("Error inesperado:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchEmergencies();
+    }, []);
+
+    // Extrae los distritos reales con emergencias para el buscador
+    const locations = useMemo(() => {
+        const locs = publications.map((pub) => pub.district);
+        return [...new Set(locs.filter(Boolean))];
+    }, [publications]);
+
+    // Filtrar emergencias en base a la barra de búsqueda superior
+    // Filtrar emergencias usando estrictamente Ciudad (region) y Distrito (district)
     const filteredEmergencies = useMemo(() => {
-        return emergencies.filter((emergency) => {
+        return publications.filter((emergency) => {
             const searchText = search.toLowerCase().trim();
 
-            const matchesSearch = [
-                emergency.title,
-                emergency.description,
-                emergency.provider,
-                emergency.location,
-                emergency.category,
-                emergency.typeLabel,
-                ...emergency.tags,
-            ]
+            const title = emergency.title || '';
+            const description = emergency.description || '';
+            const provider = emergency.provider || '';
+            const district = emergency.district || '';
+            const region = emergency.region || ''; // 🚀 Sincronizado como la Ciudad
+
+            // El buscador solo rastrea texto en el título, descripción, autor o distrito
+            const matchesSearch = [title, description, provider, district]
                 .join(' ')
                 .toLowerCase()
                 .includes(searchText);
 
-            const matchesCategory =
-                selectedCategory === 'todas' ||
-                emergency.categoryId === selectedCategory;
+            // 🚀 FILTRO CIUDAD COMPLETO: Compara contra la columna 'region' de tu base de datos
+            const matchesCity =
+                !selectedCity ||
+                selectedCity === 'todas' ||
+                emergency.region === selectedCity;
 
+            // 🚀 FILTRO DISTRITO COMPLETO: Compara contra la columna 'district' de tu base de datos
             const matchesLocation =
                 selectedLocation === 'todas' ||
-                emergency.location === selectedLocation;
+                emergency.district === selectedLocation;
 
-            return (
-                matchesSearch &&
-                matchesCategory &&
-                matchesLocation &&
-                emergency.estado === 'emergencia'
-            );
+            // Filtro de privacidad por el tag oculto (quitamos la validación estricta de status)
+            const matchesStatus = !description.includes('[OCULTO]');
+
+            return matchesSearch && matchesLocation && matchesCity && matchesStatus;
         });
-    }, [search, selectedCategory, selectedLocation]);
+    }, [publications, search, selectedCity, selectedLocation]);
 
-    // Limpiar filtros
+
+
     const clearFilters = () => {
         setSearch('');
-        setSelectedCategory('todas');
+        setSelectedCity('');
         setSelectedLocation('todas');
     };
-
     return (
         <section
             id="emergencias"
@@ -202,27 +121,32 @@ function Emergencias() {
                 description="Comparte situaciones de emergencia de tu comunidad para mantener informados a los vecinos y promover una respuesta oportuna."
             />
 
-            {/* Buscador y filtros */}
+            {/* Buscador y filtros idéntico a tu Catálogo */}
             <Reveal>
                 <SearchBar
                     search={search}
                     onSearchChange={setSearch}
                     searchPlaceholder="Buscar emergencias, accidentes, reportes..."
+                    selectedCity={selectedCity}
+                    onCityChange={setSelectedCity}
                     selectedZone={selectedLocation}
                     onZoneChange={setSelectedLocation}
-                    resultsCount={filteredEmergencies.length}
+                    resultsCount={filteredEmergencies.length} // 🚀 FIX QUIRÚRGICO: Cambiado a filteredEmergencies
                 />
             </Reveal>
 
-            {/* Encabezado de resultados */}
             <div className="flex items-center justify-between mb-5">
                 <h3 className="font-serif text-2xl text-brand-dark">
                     Reportes de emergencia
                 </h3>
             </div>
 
-            {/* Listado */}
-            {filteredEmergencies.length > 0 ? (
+            {/* Renderizado condicional basado en la carga del backend */}
+            {loading ? (
+                <div className="text-center py-16">
+                    <p className="text-brand-muted animate-pulse text-sm">Cargando reportes de riesgo comunitarios...</p>
+                </div>
+            ) : filteredEmergencies.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {filteredEmergencies.map((emergency, index) => (
                         <Reveal
@@ -231,8 +155,8 @@ function Emergencias() {
                         >
                             <PublicationCard
                                 publication={emergency}
-                                categoryLabel={emergency.category}
-                                typeLabel={emergency.typeLabel}
+                                categoryLabel={emergency.category || emergency.category_id} // 🚀 FIX: Asegura compatibilidad de etiquetas
+                                typeLabel="Emergencia"
                                 onDetails={setSelectedEmergency}
                             />
                         </Reveal>
@@ -240,10 +164,6 @@ function Emergencias() {
                 </div>
             ) : (
                 <EmptyState
-                    icon="emergency"
-                    title="No encontramos emergencias"
-                    description="Prueba con otra búsqueda o modifica los filtros."
-                    actionLabel="Limpiar filtros"
                     onAction={clearFilters}
                 />
             )}
@@ -255,7 +175,6 @@ function Emergencias() {
                 variant="help"
             />
 
-            {/* Crear publicación */}
             <Reveal>
                 <PromotionalBanner
                     title="¿Observas alguna situación de riesgo?"

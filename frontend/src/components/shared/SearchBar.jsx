@@ -1,26 +1,24 @@
-import { FiMapPin, FiSearch } from 'react-icons/fi';
+import { FiMapPin, FiSearch, FiGlobe } from 'react-icons/fi';
 import SearchInput from '../ui/SearchInput';
-
-const ZONAS_AREQUIPA = [
-    { value: 'todas', label: 'Todas las zonas' },
-    { value: 'alto-selva-alegre', label: 'Alto Selva Alegre' },
-    { value: 'cayma', label: 'Cayma' },
-    { value: 'yanahuara', label: 'Yanahuara' },
-    { value: 'cercado', label: 'Cercado' },
-    { value: 'cerro-colorado', label: 'Cerro Colorado' },
-    { value: 'jose-luis-bustamante', label: 'J.L. Bustamante y Rivero' },
-    { value: 'paucarpata', label: 'Paucarpata' },
-    { value: 'sachaca', label: 'Sachaca font' },
-];
+import { PERU_LOCATIONS } from '../../datos/peruLocations'; 
 
 function SearchBar({
     search,
     onSearchChange,
     searchPlaceholder = "Buscar en tu comunidad...",
+    selectedCity = "",
+    onCityChange,
     selectedZone = "todas",
     onZoneChange,
     resultsCount,
 }) {
+    // Maneja el cambio de ciudad y resetea el distrito seleccionado
+    const handleCitySelectChange = (e) => {
+        const city = e.target.value;
+        if (onCityChange) onCityChange(city);
+        if (onZoneChange) onZoneChange('todas');
+    };
+
     return (
         <div className="bg-white border border-brand-border rounded-3xl shadow-sm p-5 md:p-6 mb-10 space-y-4">
 
@@ -33,11 +31,33 @@ function SearchBar({
                 />
             </div>
 
-            {/* Barra inferior: Selector de zona predefinido + Contador */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-4 border-t border-brand-border/60">
+            {/* Barra inferior: Selectores dinámicos por Ciudad y Distrito + Contador */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-start gap-4 pt-4 border-t border-brand-border/60">
 
-                {/* Filtro estandarizado de zonas */}
-                <div className="relative inline-flex items-center min-w-[220px]">
+                {/* 1. Selector de Ciudad / Departamento */}
+                <div className="relative inline-flex items-center min-w-[200px] flex-1 sm:flex-none">
+                    <span className="absolute left-3.5 text-brand-accent text-base pointer-events-none">
+                        <FiGlobe />
+                    </span>
+
+                    <select
+                        value={selectedCity}
+                        onChange={handleCitySelectChange}
+                        className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-brand-border bg-brand-cream/30 text-sm text-brand-dark font-medium outline-none focus:border-brand-accent transition-colors appearance-none cursor-pointer"
+                    >
+                        <option value="">Todas las ciudades</option>
+                        {Object.keys(PERU_LOCATIONS).map((city) => (
+                            <option key={city} value={city}>
+                                {city}
+                            </option>
+                        ))}
+                    </select>
+
+                    <span className="absolute right-3 text-brand-muted text-xs pointer-events-none">▼</span>
+                </div>
+
+                {/* 2. Selector de Distrito / Zona */}
+                <div className="relative inline-flex items-center min-w-[200px] flex-1 sm:flex-none">
                     <span className="absolute left-3.5 text-brand-accent text-base pointer-events-none">
                         <FiMapPin />
                     </span>
@@ -45,23 +65,24 @@ function SearchBar({
                     <select
                         value={selectedZone}
                         onChange={(e) => onZoneChange && onZoneChange(e.target.value)}
-                        className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-brand-border bg-brand-cream/30 text-sm text-brand-dark font-medium outline-none focus:border-brand-accent transition-colors appearance-none cursor-pointer"
+                        disabled={!selectedCity}
+                        className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-brand-border bg-brand-cream/30 text-sm text-brand-dark font-medium outline-none focus:border-brand-accent transition-colors appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {ZONAS_AREQUIPA.map((zona) => (
-                            <option key={zona.value} value={zona.value}>
-                                {zona.label}
-                            </option>
-                        ))}
+                        <option value="todas">Todos los distritos</option>
+                        {selectedCity &&
+                            PERU_LOCATIONS[selectedCity].map((dist) => (
+                                <option key={dist} value={dist}>
+                                    {dist}
+                                </option>
+                            ))}
                     </select>
 
-                    <span className="absolute right-3 text-brand-muted text-xs pointer-events-none">
-                        ▼
-                    </span>
+                    <span className="absolute right-3 text-brand-muted text-xs pointer-events-none">▼</span>
                 </div>
 
-                {/* Contador de resultados */}
+                {/* Contador de resultados empujado al extremo derecho */}
                 {typeof resultsCount === 'number' && (
-                    <span className="text-sm text-brand-muted font-medium sm:ml-auto text-right sm:text-left">
+                    <span className="text-sm text-brand-muted font-medium md:ml-auto text-left md:text-right py-2 md:py-0">
                         {resultsCount} {resultsCount === 1 ? 'publicación' : 'publicaciones'}
                     </span>
                 )}
