@@ -1,8 +1,7 @@
-
+import { FiSearch } from 'react-icons/fi';
 import Button from './Button';
 
 function EmptyState({
-    icon = 'search_off',
     title = 'No encontramos publicaciones',
     description = 'Prueba con otra búsqueda o modifica los filtros.',
     actionLabel = 'Limpiar filtros',
@@ -10,11 +9,12 @@ function EmptyState({
 }) {
     return (
         <div className="text-center py-16 px-5 bg-white rounded-2xl border border-brand-border">
-            <span className="material-symbols-outlined text-4xl text-brand-muted">
-                {icon}
-            </span>
+            {/* 🚀 LOGO MEJORADO: Icono de react-icons centrado y estético */}
+            <div className="w-12 h-12 rounded-full bg-brand-soft text-brand-muted flex items-center justify-center text-xl mx-auto mb-3 shadow-3xs">
+                <FiSearch />
+            </div>
 
-            <h3 className="font-serif text-xl text-brand-dark mt-3">
+            <h3 className="font-serif text-xl text-brand-dark">
                 {title}
             </h3>
 

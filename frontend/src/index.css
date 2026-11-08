@@ -1,16 +1,15 @@
 @import "tailwindcss";
 @import "./styles/animations.css";
 
+/* Modo oscuro por clase (.dark en <html>), no por preferencia del SO */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ==============================
     TIPOGRAFÍAS ESTILO YAPE (Moderna & Urbana)
 ================================= */
-
-/* Fuente para el cuerpo, párrafos y datos */
 @import "@fontsource/inter/400.css";
 @import "@fontsource/inter/500.css";
 @import "@fontsource/inter/600.css";
-
-/* Fuente exacto estilo Yape para títulos, botones y UI */
 @import "@fontsource/poppins/500.css";
 @import "@fontsource/poppins/600.css";
 @import "@fontsource/poppins/700.css";
@@ -18,7 +17,6 @@
 /* ==============================
     VISUAL (Paleta Rojo Perú & Mi Barrio)
 ================================= */
-
 @theme {
     /* Tipografías */
     --font-serif: "Poppins", sans-serif;
@@ -27,31 +25,54 @@
     --font-editorial-italic: "Poppins", sans-serif;
 
     /* Paleta Inspirada en el Logo Mi Barrio & Bandera del Perú */
-    --color-brand-red: #A61C1E;         /* Rojo carmesí del logo */
-    --color-brand-red-bright: #D91023;  /* Rojo vivo */
-    --color-brand-red-dark: #7A0C13;    /* Rojo oscuro */
-    
-    --color-brand-dark: #121212;        /* Negro texto principal */
-    --color-brand-surface: #FFFFFF;     /* Blanco limpio */
-    --color-brand-cream: #F8F9FA;       /* Fondo neutro suave */
-    --color-brand-border: #E5E7EB;      
-    --color-brand-muted: #6B7280;       /* Texto secundario */
-    
-    /* Variables de Acción y Botones */
+    --color-brand-red: #A61C1E;
+    --color-brand-red-bright: #D91023;
+    --color-brand-red-dark: #7A0C13;
+
+    --color-brand-dark: #121212;
+    --color-brand-surface: #FFFFFF;
+    --color-brand-cream: #F8F9FA;
+    --color-brand-border: #E5E7EB;
+    --color-brand-muted: #6B7280;
+
     --color-brand-accent: #A61C1E;
     --color-brand-accent-hover: #7A0C13;
-    --color-brand-soft: #FDE8E8;        
+    --color-brand-soft: #FDE8E8;
 
-    /* Sombras planas/suaves tipo App */
     --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);
     --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
     --shadow-elevation: 0 12px 28px rgba(0, 0, 0, 0.1);
 }
 
+:root {
+    color-scheme: light;
+}
+
+.dark {
+    color-scheme: dark;
+    --color-brand-dark: #F3F4F6 !important;
+    /* Texto principal pasa a blanco limpio */
+    --color-brand-surface: #1E1E1E !important;
+    /* Tarjetas y Header pasan a Gris Oscuro Elegante */
+    --color-brand-cream: #121212 !important;
+    /* El fondo general de la app pasa a Negro Puro */
+    --color-brand-border: #2E2E2E !important;
+    /* Bordes sutiles oscuros */
+    --color-brand-muted: #9CA3AF !important;
+    /* Texto secundario de descripciones legible */
+    --color-brand-soft: #2A2A2A !important;
+    /* Recuadro "Sin fotografía" y tags en gris oscuro fino */
+    --color-brand-accent: #E5484D !important;
+    /* Rojo más claro para que contraste sobre fondo oscuro */
+    --color-brand-accent-hover: #FF6369 !important;
+    --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-elevation: 0 12px 28px rgba(0, 0, 0, 0.6);
+}
+
 /* ==============================
    ESTILOS GENERALES
 ================================= */
-
 @layer base {
     * {
         box-sizing: border-box;
@@ -67,10 +88,16 @@
         font-family: var(--font-sans);
         background-color: var(--color-brand-cream);
         color: var(--color-brand-dark);
+        transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
     }
 
-    /* Títulos y nombres limpios sin cursiva ni remates elegates */
-    h1, h2, h3, h4, h5, h6, .font-title {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    .font-title {
         font-family: var(--font-display);
         font-weight: 600;
         letter-spacing: -0.01em;
@@ -81,4 +108,39 @@
         font-family: var(--font-display);
         -webkit-tap-highlight-color: transparent;
     }
+}
+
+/* ==============================
+   MODO OSCURO: colores fijos de Tailwind que no usan los tokens brand-*
+   (sin tocar los componentes; se pueden borrar si migras a bg-brand-surface)
+================================= */
+.dark .bg-white {
+    background-color: var(--color-brand-surface);
+}
+
+.dark .bg-white\/80,
+.dark .bg-white\/95 {
+    background-color: color-mix(in srgb, var(--color-brand-surface) 90%, transparent);
+}
+
+/* Etiquetas con bg-brand-dark + text-white (ej. precio "Desde S/"): el fondo no debe volverse claro */
+.dark .bg-brand-dark {
+    background-color: #3A3A3A;
+}
+
+.dark .bg-red-50,
+.dark .bg-red-50\/50,
+.dark .bg-red-100 {
+    background-color: rgb(239 68 68 / 0.14);
+}
+
+.dark .border-red-200 {
+    border-color: rgb(239 68 68 / 0.35);
+}
+
+.dark .text-red-600,
+.dark .text-red-700,
+.dark .text-red-800,
+.dark .text-red-900 {
+    color: #FCA5A5;
 }

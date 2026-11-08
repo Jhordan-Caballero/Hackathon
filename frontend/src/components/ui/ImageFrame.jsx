@@ -1,3 +1,4 @@
+import { FiImage } from 'react-icons/fi';
 
 function ImageFrame({
     src,
@@ -17,10 +18,9 @@ function ImageFrame({
                 />
             ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-brand-muted">
-                    <span className="material-symbols-outlined text-4xl">
-                        image
-                    </span>
-                    <span className="text-xs">
+                    {/* 🚀 ICONO REEMPLAZADO: FiImage vectorial de alta definición */}
+                    <FiImage className="text-3xl text-brand-muted/70" />
+                    <span className="text-xs font-medium">
                         Sin fotografía
                     </span>
                 </div>

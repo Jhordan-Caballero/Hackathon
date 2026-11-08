@@ -296,12 +296,19 @@ function Perfil() {
 
             {activeTab === 'datos' && (
                 <div className="bg-white border border-brand-border rounded-2xl p-5 md:p-8">
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-6 gap-4">
                         <div>
                             <h3 className="font-serif text-2xl text-brand-dark">Datos personales</h3>
                             <p className="text-xs text-brand-muted mt-1">Información principal registrada en la plataforma.</p>
                         </div>
-                        <Button variant="secondary" onClick={() => setIsEditingProfile(true)} className="gap-1.5"><FiEdit2 /> Editar</Button>
+                        {/* 🚀 BOTÓN REESTRUCTURADO: Compacto, auto-ajustable y elegante */}
+                        <button
+                            type="button"
+                            onClick={() => setIsEditingProfile(true)}
+                            className="inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl border border-brand-border bg-white text-brand-dark text-xs font-semibold hover:bg-brand-soft transition-colors w-auto shrink-0 shadow-2xs"
+                        >
+                            <FiEdit2 className="text-brand-accent text-sm" /> <span>Editar</span>
+                        </button>
                     </div>
 
                     <div className="space-y-4 text-sm text-brand-dark">
@@ -354,7 +361,8 @@ function Perfil() {
                 editingPublication={editingPublication}
                 onClose={() => setEditingPublication(null)}
                 onSave={savePublication}
-            />        </section>
+            />
+        </section>
     );
 }
 

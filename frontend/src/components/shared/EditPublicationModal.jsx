@@ -28,11 +28,17 @@ function EditPublicationModal({
             setDistrict(editingPublication.district || '');
             setLocation(editingPublication.location || editingPublication.neighborhood || '');
             setStatus(editingPublication.status || 'activo');
-            setPrice(editingPublication.price ?? '');
+            
+            // Forzamos a que el precio cargado se formatee inicialmente con sus dos decimales estables .00
+            if (editingPublication.price != null) {
+                setPrice(Number(editingPublication.price).toFixed(2));
+            } else {
+                setPrice('');
+            }
+            
             setTags(editingPublication.tags || []);
             setRegion(editingPublication.region || '');
 
-            // 🚀 AUTOMATIZACIÓN DE TELÉFONO: Si empieza con 51 y tiene 11 dígitos, le quitamos el 51 para mostrar solo los 9 dígitos limpios
             const rawPhone = String(editingPublication.contact_whatsapp || editingPublication.phone || '').replace(/\D/g, '');
             const cleanPhone = (rawPhone.length === 11 && rawPhone.startsWith('51')) ? rawPhone.slice(2) : rawPhone;
             setContactWhatsapp(cleanPhone);
@@ -67,10 +73,7 @@ function EditPublicationModal({
     };
     const handleSubmitLocal = (e) => {
         e.preventDefault();
-
-        // 🚀 FORMATEO DE SALIDA DE TELÉFONO: Limpiamos y aseguramos que viaje con el 51 antes de enviar a Supabase
-        const rawPhone = contactWithatsapp.replace(/\D/g, '');
-        const formattedPhone = rawPhone.length === 9 ? `51${rawPhone}` : rawPhone;
+        const cleanPhone = contactWithatsapp.replace(/\D/g, '');
 
         const updatedPublication = {
             ...editingPublication,
@@ -81,8 +84,8 @@ function EditPublicationModal({
             status,
             tags,
             region,
-            contact_whatsapp: formattedPhone, // 🚀 Viaja formateado correctamente
-            price: (editingPublication.type === 'catalogo' || editingPublication.type === 'producto') ? Number(price) : null,
+            contact_whatsapp: cleanPhone, 
+            price: (editingPublication.type === 'catalogo' || editingPublication.type === 'producto') ? parseFloat(price) || 0 : null,
         };
 
         onSave(updatedPublication);
@@ -90,58 +93,40 @@ function EditPublicationModal({
 
     const inputClass =
         'w-full mt-1 rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs text-brand-dark outline-none focus:border-brand-accent transition-colors';
-    const labelClass = 'block text-[11px] font-semibold text-brand-dark uppercase tracking-wider';
+    const labelClass = 'block text-[10px] font-bold text-brand-dark uppercase tracking-wider';
 
     return (
         <FormModalOrCard
             title="Editar publicación"
             subtitle="Modifica los campos necesarios."
-            onSubmit={handleSubmitLocal}
+            onSubmit={handleSubmitLocal} 
             onClose={onClose}
             submitText="Guardar cambios"
-            maxWidth="max-w-2xl"
+            maxWidth="max-w-md sm:max-w-2xl" 
         >
-            {editingPublication.type === 'emergencia' && (
-                <div className="rounded-xl bg-amber-50/80 border border-amber-200 p-2 flex items-start gap-2 text-amber-900 text-[11px]">
-                    <FiAlertTriangle className="text-base text-amber-600 shrink-0 mt-0.5" />
-                    <p className="leading-tight text-amber-800">
-                        Este reporte alerta directamente a los vecinos de tu zona.
-                    </p>
-                </div>
-            )}
+            <div className="max-h-[52vh] sm:max-h-none overflow-y-auto px-1 pb-1 space-y-2.5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-brand-accent/20 [&::-webkit-scrollbar-thumb]:rounded-full">
+                
+                {editingPublication.type === 'emergencia' && (
+                    <div className="rounded-xl bg-amber-50/80 border border-amber-200 p-2 text-amber-950 text-[10px]">
+                        <p className="leading-tight font-medium">⚠️ Este reporte alerta directamente a los vecinos de tu zona.</p>
+                    </div>
+                )}
 
-            <div className="space-y-2.5">
                 <div>
-                    <label className={labelClass}>Título</label>
-                    <input
-                        type="text"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className={inputClass}
-                        required
-                    />
+                    <label className={labelClass}>Título de la publicación</label>
+                    <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} required />
                 </div>
 
                 <div>
-                    <label className={labelClass}>Descripción</label>
-                    <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className={`${inputClass} min-h-[50px] max-h-24 resize-y py-1`}
-                        required
-                    />
+                    <label className={labelClass}>Descripción o detalles</label>
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClass} min-h-[44px] max-h-20 resize-y`} required />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                     <div>
-                        <label className={labelClass}>Ciudad / Departamento</label>
-                        <select
-                            value={region}
-                            onChange={handleCityChangeLocal}
-                            className={inputClass}
-                            required
-                        >
-                            <option value="">Selecciona una ciudad</option>
+                        <label className={labelClass}>Ciudad</label>
+                        <select value={region} onChange={handleCityChangeLocal} className={inputClass} required>
+                            <option value="">Selecciona</option>
                             {Object.keys(PERU_LOCATIONS).map((city) => (
                                 <option key={city} value={city}>{city}</option>
                             ))}
@@ -150,68 +135,60 @@ function EditPublicationModal({
 
                     <div>
                         <label className={labelClass}>Distrito</label>
-                        <select
-                            value={district}
-                            onChange={(e) => setDistrict(e.target.value)}
-                            className={inputClass}
-                            disabled={!region}
-                            required
-                        >
-                            <option value="">{region ? 'Selecciona un distrito' : 'Primero elige una ciudad'}</option>
-                            {region &&
-                                PERU_LOCATIONS[region].map((dist) => (
-                                    <option key={dist} value={dist}>{dist}</option>
-                                ))}
+                        <select value={district} onChange={(e) => setDistrict(e.target.value)} className={inputClass} disabled={!region} required>
+                            <option value="">{region ? 'Elige' : 'Ciudad'}</option>
+                            {region && PERU_LOCATIONS[region].map((dist) => (
+                                <option key={dist} value={dist}>{dist}</option>
+                            ))}
                         </select>
                     </div>
 
                     <div>
                         <label className={labelClass}>Dirección o referencia</label>
-                        <input
-                            type="text"
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            className={inputClass}
-                            required
-                        />
+                        <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className={inputClass} required />
                     </div>
 
                     <div>
-                        <label className={labelClass}>WhatsApp de contacto</label>
-                        <input
-                            type="tel"
-                            value={contactWithatsapp}
-                            onChange={(e) => setContactWhatsapp(e.target.value)}
-                            placeholder="Ej. 946414833"
-                            maxLength="9"
-                            className={inputClass}
-                            required
-                        />
+                        <label className={labelClass}>WhatsApp</label>
+                        <input type="tel" value={contactWithatsapp} onChange={(e) => setContactWhatsapp(e.target.value)} placeholder="Ej. 946414833" maxLength="9" className={inputClass} required />
                     </div>
 
                     <div>
-                        <label className={labelClass}>Estado de visibilidad</label>
-                        <select
-                            value={status}
-                            onChange={(e) => setStatus(e.target.value)}
-                            className={inputClass}
-                        >
-                            <option value="activo">Activo (Visible)</option>
-                            <option value="inactivo">Inactivo (Oculto)</option>
+                        <label className={labelClass}>Estado</label>
+                        <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputClass}>
+                            <option value="activo">Activo</option>
+                            <option value="inactivo">Oculto</option>
                         </select>
                     </div>
 
                     {(editingPublication.type === 'catalogo' || editingPublication.type === 'producto') && (
                         <div>
                             <label className={labelClass}>Precio (S/)</label>
-                            <input
-                                type="number"
-                                value={price}
-                                onChange={(e) => setPrice(e.target.value)}
-                                className={inputClass}
-                                min="0"
-                                step="0.01"
-                                required
+                            <input 
+                                type="text" 
+                                value={price} 
+                                onChange={(e) => {
+                                    let val = e.target.value.replace(/[^0-9.]/g, '');
+                                    
+                                    if (!val) {
+                                        setPrice('');
+                                        return;
+                                    }
+
+                                    if (val && !val.includes('.')) {
+                                        setPrice(`${val}.00`);
+                                        return;
+                                    }
+
+                                    const split = val.split('.');
+                                    if (split[1] && split[1].length > 2) {
+                                        val = `${split[0]}.${split[1].slice(0, 2)}`;
+                                    }
+                                    setPrice(val);
+                                }} 
+                                inputMode="decimal"
+                                className={inputClass} 
+                                required 
                             />
                         </div>
                     )}
@@ -220,38 +197,16 @@ function EditPublicationModal({
                 <div>
                     <label className={labelClass}>Etiquetas (#)</label>
                     <div className="flex gap-2 mt-1">
-                        <input
-                            type="text"
-                            value={tagInput}
-                            onChange={(e) => setTagInput(e.target.value)}
-                            onKeyDown={handleKeyDownTag}
-                            placeholder="Escribe y presiona Enter"
-                            className="w-full rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs outline-none focus:border-brand-accent"
-                        />
-                        <button
-                            type="button"
-                            onClick={handleAddTag}
-                            className="px-3 bg-brand-accent text-white rounded-xl hover:bg-brand-accent-hover transition-colors flex items-center justify-center text-sm"
-                        >
-                            <FiPlus />
-                        </button>
+                        <input type="text" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleKeyDownTag} placeholder="Presiona Enter" className="w-full rounded-xl border border-brand-border bg-white px-3 py-1.5 text-xs outline-none focus:border-brand-accent" />
+                        <button type="button" onClick={handleAddTag} className="px-3 bg-brand-accent text-white rounded-xl hover:bg-brand-accent-hover flex items-center justify-center text-xs font-bold"><FiPlus /></button>
                     </div>
 
                     {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2 max-h-14 overflow-y-auto">
+                        <div className="flex flex-wrap gap-1 mt-1.5 max-h-10 overflow-y-auto">
                             {tags.map((tag) => (
-                                <span
-                                    key={tag}
-                                    className="inline-flex items-center gap-1 bg-brand-soft text-brand-accent text-[10px] font-semibold px-2 py-0.5 rounded-full border border-brand-border/60"
-                                >
+                                <span key={tag} className="inline-flex items-center gap-1 bg-brand-soft text-brand-accent text-[10px] font-semibold px-2 py-0.5 rounded-full border border-brand-border/60">
                                     {tag}
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemoveTag(tag)}
-                                        className="hover:text-red-600 transition-colors"
-                                    >
-                                        <FiX className="text-[10px]" />
-                                    </button>
+                                    <button type="button" onClick={() => handleRemoveTag(tag)} className="hover:text-red-600 transition-colors"><FiX className="text-[9px]" /></button>
                                 </span>
                             ))}
                         </div>

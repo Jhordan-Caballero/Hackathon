@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FiImage, FiPlus, FiX, FiPhone, FiAlertTriangle } from 'react-icons/fi';
+import { FiPlus, FiX, FiPhone, FiAlertTriangle } from 'react-icons/fi';
 
 import FormModalOrCard from '../components/forms/FormModalOrCard';
-import ImageFrame from '../components/ui/ImageFrame';
 import { PERU_LOCATIONS } from '../datos/peruLocations';
 import { supabase } from '../supabaseClient';
 
@@ -33,8 +32,8 @@ function Publicar() {
     const [profileData, setProfileData] = useState(null);
     const [tags, setTags] = useState([]);
     const [tagInput, setTagInput] = useState('');
-    const [imagePreview, setImagePreview] = useState('');
     const [message, setMessage] = useState('');
+
     useEffect(() => {
         const savedProfile = localStorage.getItem(PROFILE_KEY);
         if (savedProfile) {
@@ -70,7 +69,6 @@ function Publicar() {
         }));
         setTags([]);
         setTagInput('');
-        setImagePreview('');
         setMessage('');
     };
 
@@ -86,10 +84,7 @@ function Publicar() {
             city: selectedCity,
             district: '',
         }));
-    };
-
-    //parte 3
-    const handleAddTag = () => {
+    }; const handleAddTag = () => {
         const cleaned = tagInput.trim().replace(/^#+/, '');
         if (!cleaned) return;
         const formattedTag = `#${cleaned}`;
@@ -110,23 +105,15 @@ function Publicar() {
         setTags(tags.filter((tag) => tag !== tagToRemove));
     };
 
-    const handleImageChange = (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        setImagePreview(URL.createObjectURL(file));
-    };
     const handleSubmit = async (event) => {
         event.preventDefault();
         setMessage('Enviando publicación al vecindario...');
 
-        const rawPhone = form.phone.replace(/\D/g, '');
-        const formattedPhone = rawPhone.length === 9 ? `51${rawPhone}` : rawPhone;
+        const cleanPhone = form.phone.replace(/\D/g, '');
 
-        // 1. Definimos las variables de control para mapear tu base de datos unificada
         let dbSection = 'servicios';
         let dbType = 'servicio';
         let dbIntent = 'ofrezco';
-        let dbStatus = 'activa'; // Requisito estricto de pub_status_chk
 
         if (type === 'catalogo') {
             dbSection = 'servicios';
@@ -138,16 +125,14 @@ function Publicar() {
             dbIntent = 'solicito';
         } else if (type === 'emergencia') {
             dbSection = 'comunidad';
-            dbType = 'ayuda';       // Mapeamos temporalmente a ayuda social para pasar el check
+            dbType = 'ayuda';
             dbIntent = 'solicito';
         }
 
         try {
-            // 2. Inserción en Supabase enviando las columnas unificadas correspondientes
             const { error } = await supabase
                 .from('publications')
                 .insert([
-                    // Busca el objeto insertado dentro de tu handleSubmit y déjalo así:
                     {
                         user_id: profileData?.id,
                         title: form.title.trim(),
@@ -156,14 +141,14 @@ function Publicar() {
                         section: dbSection,
                         intent: dbIntent,
                         price: type === 'catalogo' ? Number(form.price) : null,
-                        region: form.city,      
-                        district: form.district, 
+                        region: form.city,
+                        district: form.district,
                         location: form.location.trim(),
-                        contact_whatsapp: formattedPhone, 
+                        contact_whatsapp: cleanPhone,
                         tags: tags.map(tag => tag.replace('#', '').toLowerCase().trim()),
                         emergency_support: type === 'emergencia'
+                        // 🚀 Modificado: Quitamos el envío de image_urls
                     }
-
                 ]);
 
             if (error) {
@@ -180,8 +165,6 @@ function Publicar() {
 
     const inputClass = 'w-full rounded-xl border border-brand-border bg-white px-4 py-3 text-sm text-brand-dark outline-none focus:border-brand-accent transition-colors';
     const labelClass = 'block text-sm font-semibold text-brand-dark mb-2';
-
-    //parte 3
     return (
         <FormModalOrCard
             title="Crear publicación"
@@ -235,18 +218,42 @@ function Publicar() {
             {type === 'catalogo' && (
                 <div>
                     <label className={labelClass}>Precio (S/)</label>
-                    <input type="number" name="price" value={form.price} onChange={handleChange} placeholder="0.00" min="0" step="0.01" className={inputClass} required />
+                    <input
+                        type="text"
+                        name="price"
+                        value={form.price}
+                        onChange={(e) => {
+                            let val = e.target.value.replace(/[^0-9.]/g, '');
+
+                            if (!val) {
+                                setForm(prev => ({ ...prev, price: '' }));
+                                return;
+                            }
+
+                            if (val && !val.includes('.')) {
+                                setForm(prev => ({ ...prev, price: `${val}.00` }));
+                                return;
+                            }
+
+                            const split = val.split('.');
+                            if (split[1] && split[1].length > 2) {
+                                val = `${split[0]}.${split[1].slice(0, 2)}`;
+                            }
+
+                            setForm(prev => ({ ...prev, price: val }));
+                        }}
+                        inputMode="decimal" 
+                        placeholder="0.00"
+                        className={inputClass}
+                        required
+                    />
                 </div>
             )}
+
+
             <div>
                 <label className={labelClass}>Ciudad / Departamento</label>
-                <select
-                    name="city"
-                    value={form.city}
-                    onChange={handleCityChange}
-                    className={inputClass}
-                    required
-                >
+                <select name="city" value={form.city} onChange={handleCityChange} className={inputClass} required>
                     <option value="">Selecciona una ciudad</option>
                     {Object.keys(PERU_LOCATIONS).map((city) => <option key={city} value={city}>{city}</option>)}
                 </select>
@@ -254,14 +261,7 @@ function Publicar() {
 
             <div>
                 <label className={labelClass}>Distrito</label>
-                <select
-                    name="district"
-                    value={form.district}
-                    onChange={handleChange}
-                    className={inputClass}
-                    disabled={!form.city}
-                    required
-                >
+                <select name="district" value={form.district} onChange={handleChange} className={inputClass} disabled={!form.city} required>
                     <option value="">{form.city ? 'Selecciona un distrito' : 'Primero elige una ciudad'}</option>
                     {form.city && PERU_LOCATIONS[form.city].map((dist) => <option key={dist} value={dist}>{dist}</option>)}
                 </select>
@@ -291,21 +291,7 @@ function Publicar() {
             </div>
 
             <div>
-                <label className={labelClass}>Fotografía (opcional)</label>
-                <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-brand-border cursor-pointer overflow-hidden hover:bg-brand-soft/50 transition">
-                    {imagePreview ? <ImageFrame src={imagePreview} alt="Vista previa" aspectRatio="aspect-video" className="w-full" /> : (
-                        <div className="py-8 flex flex-col items-center justify-center gap-2 text-brand-muted">
-                            <FiImage className="text-3xl" />
-                            <span className="text-sm">Selecciona una fotografía</span>
-                        </div>
-                    )}
-                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-                </label>
-            </div>
-
-            <div>
                 <label className={labelClass}>WhatsApp de contacto</label>
-                {/* REEMPLÁZALO PARA QUE QUEDE ASÍ: */}
                 <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted text-lg pointer-events-none"><FiPhone /></span>
                     <input
@@ -319,7 +305,6 @@ function Publicar() {
                         required
                     />
                 </div>
-
                 <p className="text-[11px] text-brand-muted mt-1.5">Viene cargado con el número de tu perfil, pero puedes cambiarlo si prefieres usar otro.</p>
             </div>
         </FormModalOrCard>

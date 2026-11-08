@@ -13,7 +13,8 @@ function Catalog() {
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('todas');
     const [selectedCity, setSelectedCity] = useState('');
-    const [selectedLocation, setSelectedLocation] = useState('todas'); const [selectedRating, setSelectedRating] = useState('todas');
+    const [selectedLocation, setSelectedLocation] = useState('todas'); 
+    const [selectedRating, setSelectedRating] = useState('todas');
     const [selectedPublication, setSelectedPublication] = useState(null);
 
     const [publications, setPublications] = useState([]);
@@ -23,7 +24,7 @@ function Catalog() {
         async function fetchPublications() {
             setLoading(true);
             try {
-                // 🚀 CORRECCIÓN DE BACKEND: Filtramos estrictamente por la sección comercial permitida en el SQL ('servicios')
+                // 🚀 FIJO: Agregamos la subconsulta para jalar los comentarios reales y el nombre del autor
                 const { data, error } = await supabase
                     .from('publications')
                     .select(`
@@ -31,6 +32,15 @@ function Catalog() {
                         profiles (
                             full_name,
                             whatsapp
+                        ),
+                        reviews:reviews!publication_id (
+                            id,
+                            rating,
+                            comment,
+                            created_at,
+                            author:profiles!author_id (
+                                full_name
+                            )
                         )
                     `)
                     .eq('section', 'servicios')
@@ -62,8 +72,6 @@ function Catalog() {
         const locs = publications.map((pub) => pub.district);
         return [...new Set(locs.filter(Boolean))];
     }, [publications]);
-
-
     const filteredPublications = useMemo(() => {
         return publications.filter((publication) => {
             const searchText = search.toLowerCase().trim();
@@ -111,6 +119,7 @@ function Catalog() {
         setSelectedCity('');
         setSelectedLocation('todas');
     };
+
     return (
         <section
             id="catalogo"

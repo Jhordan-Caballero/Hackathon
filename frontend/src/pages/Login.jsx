@@ -39,7 +39,7 @@ function Login() {
             setMessage('¡Inicio de sesión exitoso! Redirigiendo...');
 
             setTimeout(() => {
-                navigate('/perfil');
+                navigate('/');
             }, 1200);
 
         } catch (err) {

@@ -57,11 +57,9 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
             onSubmit={handleSubmit}
             onClose={onClose}
             submitText="Guardar cambios"
-            maxWidth="max-w-2xl" // 🚀 Más ancho para que los campos queden lado a lado
+            maxWidth="max-w-2xl"
         >
-            {/* Contenedor en grilla para compactar la altura al máximo */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
-
                 {/* Nombre completo */}
                 <div className="sm:col-span-2">
                     <label className={labelClass}>Nombre completo</label>
@@ -166,8 +164,16 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
                         />
                     </div>
                 </div>
-
             </div>
+
+            {/* 🚀 SOLUCIÓN: Si tu FormModalOrCard inyecta botones automáticos abajo que se estiran, 
+                inyectar este bloque de estilos en línea anula el estiramiento del grid */}
+            <style jsx global>{`
+                form button[type="submit"] {
+                    max-w: 160px !important;
+                    margin-left: auto !important;
+                }
+            `}</style>
         </FormModalOrCard>
     );
 }

@@ -4,7 +4,7 @@ import { FiUser, FiMapPin, FiPhone } from 'react-icons/fi';
 import FormModalOrCard from '../components/forms/FormModalOrCard';
 import logoImg from '../assets/Loge.png';
 import { PERU_LOCATIONS } from '../datos/peruLocations';
-import { supabase } from '../supabaseClient'; // 1. IMPORTANTE: Agregado el cliente de Supabase
+import { supabase } from '../supabaseClient';
 
 const PROFILE_KEY = 'community-profile';
 
@@ -35,18 +35,46 @@ function Registro() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setMessage('Registrando en la base de datos...');
+        setMessage('Validando datos de registro...');
+
+        // 🚀 LIMPIEZA DE TELÉFONO: Extraemos los 9 dígitos puros
+        const rawPhone = form.phone.replace(/\D/g, '');
+        if (rawPhone.length !== 9) {
+            setMessage('El número de WhatsApp debe tener exactamente 9 dígitos.');
+            return;
+        }
+
+        // Le anteponemos el prefijo '51' exigido por tu base de datos de producción
+        const formattedPhone = `51${rawPhone}`;
 
         try {
+            // 🚀 CANDADO DE SEGURIDAD: Consultamos a Supabase si el número ya existe en profiles
+            const { data: existingUser, error: searchError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('whatsapp', formattedPhone)
+                .maybeSingle();
+
+            if (searchError) {
+                console.error("Error validando teléfono:", searchError.message);
+            }
+
+            // Si encuentra una coincidencia, frenamos el registro de inmediato
+            if (existingUser) {
+                setMessage('⚠️ Este número de WhatsApp ya se encuentra registrado con otra cuenta.');
+                return;
+            }
+
+            setMessage('Registrando en la base de datos...');
             const { data, error } = await supabase
                 .from('profiles')
                 .insert([
                     {
-                        full_name: form.name,
+                        full_name: form.name.trim(),
                         region: form.city,
                         district: form.district,
-                        neighborhood: form.location,
-                        whatsapp: form.phone,
+                        neighborhood: form.location.trim(),
+                        whatsapp: formattedPhone, // Guardamos el celular formateado de forma segura
                         has_whatsapp: true
                     }
                 ])
@@ -125,7 +153,7 @@ function Registro() {
                         className={inputClass}
                         required
                     >
-                        <option value="">-- Selecciona una ciudad --</option>
+                        <option value="">Selecciona una ciudad</option>
                         {Object.keys(PERU_LOCATIONS).map((city) => (
                             <option key={city} value={city}>
                                 {city}
