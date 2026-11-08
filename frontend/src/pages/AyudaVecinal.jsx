@@ -93,7 +93,7 @@ function AyudaVecinal() {
 
             const matchesType = publication.section === 'comunidad';
             const matchesStatus = !publication.description?.includes('[OCULTO]');
-            const isNotEmergency = !publication.emergency_support;
+            const isNotEmergency = true;
 
             return matchesSearch && matchesLocation && matchesCity && matchesStatus && matchesType && isNotEmergency;
         });
