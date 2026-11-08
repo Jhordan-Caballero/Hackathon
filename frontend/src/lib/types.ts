@@ -21,7 +21,7 @@ export type EmergencyType =
   | 'servicios_basicos'
   | 'persona_vulnerable'
   | 'otro'
-export type EmergencyStatus = 'activa' | 'atendida' | 'resuelta'
+export type EmergencyStatus = 'activa' | 'atendida' | 'resuelta' | 'cancelada'
 
 export interface Category {
   id: string
@@ -106,6 +106,15 @@ export interface Emergency {
   contact_phone: string | null
   created_at: string
   updated_at: string
+}
+
+/** Vecino que respondió "Yo ayudo" a una emergencia. */
+export interface Volunteer {
+  emergency_id: string
+  user_id: string
+  full_name: string
+  message: string | null
+  created_at: string
 }
 
 export interface EmergencyFeedItem extends Emergency {

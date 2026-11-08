@@ -20,6 +20,7 @@ import type {
   RegisterInput,
   Review,
   Section,
+  Volunteer,
 } from './types'
 
 // =====================================================================
@@ -387,10 +388,42 @@ export async function addReview(publicationId: string, rating: number, comment?:
     comment: comment?.trim() || null,
   })
   if (error) {
-    if (error.code === '23505') throw new Error('Ya calificaste esta publicación')
+    if (error.code === '23505') throw new Error('Ya calificaste esta publicación. Puedes editar tu reseña.')
+    if (/reviews_no_anonimos/.test(error.message)) throw new Error('Regístrate para poder calificar')
     if (error.code === '42501') throw new Error('No puedes calificar tu propia publicación')
     throw error
   }
+}
+
+/** Mi reseña de una publicación (para mostrar "Editar mi reseña"), o null. */
+export async function getMyReview(publicationId: string): Promise<Review | null> {
+  const userId = await getUserId()
+  if (!userId) return null
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('publication_id', publicationId)
+    .eq('author_id', userId)
+    .maybeSingle()
+  if (error) throw error
+  return data as Review | null
+}
+
+/** Editar mi reseña (estrellas y/o comentario). */
+export async function updateReview(reviewId: string, rating: number, comment?: string): Promise<void> {
+  const { error } = await supabase
+    .from('reviews')
+    .update({
+      rating: Math.min(5, Math.max(1, Math.round(rating))),
+      comment: comment?.trim() || null,
+    })
+    .eq('id', reviewId)
+  if (error) throw error
+}
+
+export async function deleteReview(reviewId: string): Promise<void> {
+  const { error } = await supabase.from('reviews').delete().eq('id', reviewId)
+  if (error) throw error
 }
 
 // =====================================================================
@@ -405,7 +438,7 @@ export async function listEmergencies(opts: { region?: string; district?: string
       (e) =>
         (!opts.region || e.region === opts.region) &&
         (!opts.district || e.district === opts.district) &&
-        (opts.onlyActive === false || e.status !== 'resuelta'),
+        (opts.onlyActive === false || (e.status !== 'resuelta' && e.status !== 'cancelada')),
     )
     return { ...base, data }
   })
@@ -419,7 +452,7 @@ async function fetchEmergencies(opts: { region?: string; district?: string; only
     .limit(100)
   if (opts.region) q = q.eq('region', opts.region)
   if (opts.district) q = q.eq('district', opts.district)
-  if (opts.onlyActive ?? true) q = q.neq('status', 'resuelta')
+  if (opts.onlyActive ?? true) q = q.not('status', 'in', '(resuelta,cancelada)')
   const { data, error } = await q
   if (error) throw error
   return data as EmergencyFeedItem[]
@@ -467,12 +500,89 @@ export async function updateEmergencyStatus(id: string, status: EmergencyStatus)
 }
 
 /** Botón "Yo ayudo". */
+/** Marcar mi emergencia como cancelada (por ejemplo, si fue una falsa alarma). */
+export async function cancelEmergency(id: string): Promise<void> {
+  await updateEmergencyStatus(id, 'cancelada')
+}
+
+/** Borrar mi emergencia (solo el que la reportó). */
+export async function deleteEmergency(id: string): Promise<void> {
+  const { error } = await supabase.from('emergencies').delete().eq('id', id)
+  if (error) throw error
+}
+
+/** "Mis emergencias": las que reporté yo. */
+export async function myEmergencies(): Promise<EmergencyFeedItem[]> {
+  const userId = await getUserId()
+  if (!userId) return []
+  const { data, error } = await supabase
+    .from('emergencies_feed')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data as EmergencyFeedItem[]
+}
+
+/** Botón "Yo ayudo". */
 export async function volunteerForEmergency(emergencyId: string, message?: string): Promise<void> {
   await ensureSession()
   const { error } = await supabase
     .from('emergency_volunteers')
     .insert({ emergency_id: emergencyId, message: message ?? null })
   if (error && error.code !== '23505') throw error // 23505 = ya se había ofrecido
+}
+
+/** Retirar mi "Yo ayudo". */
+export async function withdrawVolunteer(emergencyId: string): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) return
+  const { error } = await supabase
+    .from('emergency_volunteers')
+    .delete()
+    .eq('emergency_id', emergencyId)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+/** Quiénes respondieron "Yo ayudo" (con su nombre), del más reciente al más antiguo. */
+export async function listVolunteers(emergencyId: string): Promise<Volunteer[]> {
+  const { data, error } = await supabase
+    .from('emergency_volunteers')
+    .select('emergency_id, user_id, message, created_at')
+    .eq('emergency_id', emergencyId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  const rows = (data ?? []) as Omit<Volunteer, 'full_name'>[]
+  const ids = [...new Set(rows.map((r) => r.user_id))]
+  const names = new Map<string, string>()
+  if (ids.length) {
+    const { data: people } = await supabase.from('profiles').select('id, full_name').in('id', ids)
+    ;((people ?? []) as { id: string; full_name: string }[]).forEach((p) => names.set(p.id, p.full_name))
+  }
+  return rows.map((r) => ({ ...r, full_name: names.get(r.user_id) ?? 'Vecino' }))
+}
+
+/**
+ * DIRECTORIO DE EMERGENCIA: servicios y grupos de apoyo marcados con
+ * "apoyo en emergencias" (catálogo y comunidad), mejor calificados primero.
+ * Funciona sin internet con la última copia guardada.
+ */
+export async function listEmergencyDirectory(opts: { region?: string; district?: string } = {}): Promise<PublicationFeedItem[]> {
+  return withOfflineCache(`directorio:${JSON.stringify(opts)}`, async () => {
+    let q = supabase
+      .from('publications_feed')
+      .select('*')
+      .eq('emergency_support', true)
+      .eq('status', 'activa')
+      .order('avg_rating', { ascending: false })
+      .limit(100)
+    if (opts.region) q = q.eq('region', opts.region)
+    if (opts.district) q = q.eq('district', opts.district)
+    const { data, error } = await q
+    if (error) throw error
+    return data as PublicationFeedItem[]
+  })
 }
 
 /** Escucha emergencias nuevas/actualizadas en vivo. Devuelve función para dejar de escuchar. */
