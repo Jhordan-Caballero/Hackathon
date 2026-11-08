@@ -6,13 +6,13 @@ import { PERU_LOCATIONS } from '../../datos/peruLocations';
 function EditProfileModal({ profile, isOpen, onClose, onSave }) {
     if (!isOpen) return null;
 
-    const [selectedCity, setSelectedCity] = useState(profile?.city || '');
+    // Ajustamos para leer las columnas reales de Supabase: region y district
+    const [selectedCity, setSelectedCity] = useState(profile?.region || profile?.city || '');
     const [selectedDistrict, setSelectedDistrict] = useState(profile?.district || '');
 
-    // Sincronizar el estado con el perfil cuando se abre la modal o cambia el perfil
     useEffect(() => {
         if (profile) {
-            setSelectedCity(profile.city || '');
+            setSelectedCity(profile.region || profile.city || '');
             setSelectedDistrict(profile.district || '');
         }
     }, [profile]);
@@ -20,7 +20,7 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
     const handleCityChange = (e) => {
         const newCity = e.target.value;
         setSelectedCity(newCity);
-        setSelectedDistrict(''); // Resetea el distrito al cambiar la ciudad
+        setSelectedDistrict(''); 
     };
 
     const getLocalPhone = (phone) => {
@@ -36,14 +36,15 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
         e.preventDefault();
         const formData = new FormData(e.target);
         const rawPhone = formData.get('phone').replace(/\D/g, '');
-        const formattedPhone = rawPhone.length === 9 ? `51${rawPhone}` : rawPhone;
 
+        // Construimos el objeto final usando las columnas exactas de Supabase
         const updatedProfile = {
-            name: formData.get('name'),
-            city: selectedCity,
+            id: profile.id, // Pasamos el ID para saber a qué usuario actualizar
+            full_name: formData.get('name'),
+            region: selectedCity,
             district: selectedDistrict,
-            location: formData.get('location'),
-            phone: formattedPhone,
+            neighborhood: formData.get('location'),
+            whatsapp: rawPhone,
         };
         onSave(updatedProfile);
     };
@@ -70,7 +71,7 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
                     <input
                         type="text"
                         name="name"
-                        defaultValue={profile.name}
+                        defaultValue={profile.full_name || profile.name}
                         required
                         className={inputClass}
                     />
@@ -139,7 +140,7 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
                     <input
                         type="text"
                         name="location"
-                        defaultValue={profile.location}
+                        defaultValue={profile.neighborhood || profile.location}
                         required
                         className={inputClass}
                     />
@@ -156,7 +157,7 @@ function EditProfileModal({ profile, isOpen, onClose, onSave }) {
                     <input
                         type="tel"
                         name="phone"
-                        defaultValue={getLocalPhone(profile.phone)}
+                        defaultValue={getLocalPhone(profile.whatsapp || profile.phone)}
                         placeholder="946414833"
                         maxLength="9"
                         required

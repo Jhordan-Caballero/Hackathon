@@ -1,17 +1,50 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; 
 import { FiUser, FiPhone } from 'react-icons/fi';
 import FormModalOrCard from '../components/forms/FormModalOrCard';
 import logoImg from '../assets/Loge.png';
+import { supabase } from '../supabaseClient'; 
+
+const PROFILE_KEY = 'community-profile'; 
 
 function Login() {
+    const navigate = useNavigate(); 
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [message, setMessage] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setMessage('Inicio de sesión simulado correctamente.');
+        setMessage('Verificando credenciales...');
+
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('full_name', name.trim())
+                .eq('whatsapp', phone.trim());
+
+            if (error) {
+                setMessage(`Error: ${error.message}`);
+                return;
+            }
+
+            if (data.length === 0) {
+                setMessage('Usuario o número de WhatsApp incorrectos.');
+                return;
+            }
+
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(data[0]));
+            window.dispatchEvent(new Event('storage-update')); 
+            setMessage('¡Inicio de sesión exitoso! Redirigiendo...');
+
+            setTimeout(() => {
+                navigate('/perfil');
+            }, 1200);
+
+        } catch (err) {
+            setMessage('Error al intentar conectar.');
+        }
     };
 
     const inputClass =
@@ -38,7 +71,6 @@ function Login() {
             }
         >
             <div className="space-y-4">
-                {/* Campo Nombre */}
                 <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-2">
                         Nombre completo
@@ -59,7 +91,6 @@ function Login() {
                     </div>
                 </div>
 
-                {/* Campo Teléfono */}
                 <div>
                     <label className="block text-sm font-semibold text-brand-dark mb-2">
                         Número de celular
@@ -85,3 +116,4 @@ function Login() {
 }
 
 export default Login;
+

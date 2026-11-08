@@ -4,6 +4,7 @@ import { FiUser, FiMapPin, FiPhone } from 'react-icons/fi';
 import FormModalOrCard from '../components/forms/FormModalOrCard';
 import logoImg from '../assets/Loge.png';
 import { PERU_LOCATIONS } from '../datos/peruLocations';
+import { supabase } from '../supabaseClient'; // 1. IMPORTANTE: Agregado el cliente de Supabase
 
 const PROFILE_KEY = 'community-profile';
 
@@ -18,13 +19,11 @@ function Registro() {
     });
     const [message, setMessage] = useState('');
 
-    // Manejo general de inputs de texto/teléfono
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
-    // Manejo del cambio de ciudad: actualiza la ciudad y limpia el distrito
     const handleCityChange = (e) => {
         const selectedCity = e.target.value;
         setForm((prev) => ({
@@ -34,16 +33,41 @@ function Registro() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setMessage('Registrando en la base de datos...');
 
-        // Guardar el nuevo perfil localmente incluyendo ciudad y distrito
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(form));
-        setMessage('¡Registro exitoso! Redirigiendo a tu perfil...');
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .insert([
+                    {
+                        full_name: form.name,
+                        region: form.city,
+                        district: form.district,
+                        neighborhood: form.location,
+                        whatsapp: form.phone,
+                        has_whatsapp: true
+                    }
+                ])
+                .select();
 
-        setTimeout(() => {
-            navigate('/perfil');
-        }, 1200);
+            if (error) {
+                setMessage(`Error: ${error.message}`);
+                return;
+            }
+
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(data[0]));
+            window.dispatchEvent(new Event('storage-update'));
+            setMessage('¡Registro exitoso! Redirigiendo a tu perfil...');
+
+            setTimeout(() => {
+                navigate('/');
+            }, 1200);
+
+        } catch (err) {
+            setMessage('Ocurrió un error inesperado al conectar.');
+        }
     };
 
     const inputClass =
@@ -70,7 +94,6 @@ function Registro() {
                 </p>
             }
         >
-            {/* Nombre completo */}
             <div>
                 <label className={labelClass}>Nombre completo</label>
                 <div className="relative">
@@ -89,7 +112,6 @@ function Registro() {
                 </div>
             </div>
 
-            {/* Ciudad / Departamento */}
             <div>
                 <label className={labelClass}>Ciudad / Departamento</label>
                 <div className="relative">
@@ -113,7 +135,6 @@ function Registro() {
                 </div>
             </div>
 
-            {/* Distrito */}
             <div>
                 <label className={labelClass}>Distrito</label>
                 <div className="relative">
@@ -143,7 +164,6 @@ function Registro() {
                 </div>
             </div>
 
-            {/* Dirección / Zona */}
             <div>
                 <label className={labelClass}>Dirección o referencia de zona</label>
                 <div className="relative">
@@ -162,7 +182,6 @@ function Registro() {
                 </div>
             </div>
 
-            {/* Número de WhatsApp */}
             <div>
                 <label className={labelClass}>Número de WhatsApp</label>
                 <div className="relative">

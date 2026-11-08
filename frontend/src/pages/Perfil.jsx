@@ -14,86 +14,23 @@ import PublicationCard from '../components/shared/PublicationCard';
 import PublicationDetail from '../components/shared/PublicationDetail';
 import EditPublicationModal from '../components/shared/EditPublicationModal';
 import EditProfileModal from '../components/shared/EditProfileModal';
+import { supabase } from '../supabaseClient'; 
 
-const PUBLICATIONS_KEY = 'community-publications';
 const PROFILE_KEY = 'community-profile';
-
-const initialProfile = {
-    name: 'María López',
-    city: 'Arequipa',
-    district: 'Cerro Colorado',
-    location: 'Sector Las Palmas',
-    phone: '946414833',
-};
-
-const initialPublications = [
-    {
-        id: 101,
-        ownerId: 'current-user',
-        type: 'catalogo',
-        typeLabel: 'Producto',
-        icon: '🥐',
-        title: 'Postres caseros',
-        description: 'Ofrezco postres preparados en casa con ingredientes frescos.',
-        provider: 'María López',
-        city: 'Arequipa',
-        district: 'Cerro Colorado',
-        location: 'Sector Las Palmas',
-        phone: '946414833',
-        date: 'Hace 2 días',
-        image: null,
-        price: 15,
-        tags: ['#Postres', '#Casero'],
-    },
-    {
-        id: 102,
-        ownerId: 'current-user',
-        type: 'ayuda',
-        typeLabel: 'Solicito ayuda',
-        icon: '📚',
-        title: 'Apoyo escolar en matemáticas',
-        description: 'Busco apoyo para reforzar algunos temas de matemáticas.',
-        provider: 'María López',
-        city: 'Arequipa',
-        district: 'Cerro Colorado',
-        location: 'Sector Las Palmas',
-        phone: '946414833',
-        date: 'Ayer',
-        image: null,
-        tags: ['#Educación', '#Apoyo'],
-    },
-    {
-        id: 103,
-        ownerId: 'current-user',
-        type: 'emergencia',
-        typeLabel: 'Emergencia',
-        icon: '🚨',
-        title: 'Falta de alumbrado en Calle 4',
-        description: 'Luminaria apagada en la esquina del parque desde anoche.',
-        provider: 'María López',
-        city: 'Arequipa',
-        district: 'Cerro Colorado',
-        location: 'Sector Las Palmas',
-        phone: '946414833',
-        date: 'Hace 3 horas',
-        image: null,
-        tags: ['#Seguridad', '#Alumbrado'],
-    },
-];
 
 function Perfil() {
     const [activeTab, setActiveTab] = useState('datos');
-    const [profile, setProfile] = useState(initialProfile);
+    const [profile, setProfile] = useState(null);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-    const [publications, setPublications] = useState(initialPublications);
+    const [publications, setPublications] = useState([]);
+    const [loadingPublications, setLoadingPublications] = useState(true);
     const [selectedPublication, setSelectedPublication] = useState(null);
     const [editingPublication, setEditingPublication] = useState(null);
 
     const [editForm, setEditForm] = useState({
         title: '',
         description: '',
-        city: '',
         district: '',
         location: '',
         price: '',
@@ -110,40 +47,88 @@ function Perfil() {
         }
         return phone;
     };
-
     useEffect(() => {
         const savedProfile = localStorage.getItem(PROFILE_KEY);
-        const savedPublications = localStorage.getItem(PUBLICATIONS_KEY);
-
         if (savedProfile) {
-            setProfile(JSON.parse(savedProfile));
-        }
-
-        if (savedPublications) {
-            const parsedPublications = JSON.parse(savedPublications);
-            setPublications([
-                ...parsedPublications.filter(
-                    (pub) => pub.ownerId === 'current-user'
-                ),
-                ...initialPublications,
-            ]);
+            try {
+                const parsed = JSON.parse(savedProfile);
+                const userObject = Array.isArray(parsed) ? parsed[0] : parsed;
+                setProfile(userObject);
+            } catch (e) {
+                console.error("Error al leer sesión local", e);
+            }
         }
     }, []);
 
-    const saveProfile = (newProfileData) => {
-        setProfile(newProfileData);
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfileData));
-        setIsEditingProfile(false);
+
+    useEffect(() => {
+        if (!profile) return;
+
+        async function fetchMyPublications() {
+            setLoadingPublications(true);
+            try {
+                const { data, error } = await supabase
+                    .from('publications')
+                    .select('*')
+                    .or(`phone.eq.${profile.whatsapp},provider.eq.${profile.full_name}`)
+                    .order('created_at', { ascending: false });
+
+                if (!error) {
+                    setPublications(data || []);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoadingPublications(false);
+            }
+        }
+
+        fetchMyPublications();
+    }, [profile]);
+      const saveProfile = async (newProfileData) => {
+        try {
+            if (profile?.id) {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .update({
+                        full_name: newProfileData.full_name,
+                        region: newProfileData.region,
+                        district: newProfileData.district,
+                        neighborhood: newProfileData.neighborhood,
+                        whatsapp: newProfileData.whatsapp
+                    })
+                    .eq('id', profile.id)
+                    .select();
+
+                if (error) {
+                    alert(`No se pudo actualizar en Supabase: ${error.message}`);
+                    return;
+                }
+
+                // FIX CRUCIAL: Supabase devuelve una lista, extraemos el objeto real [0]
+                const updatedUser = Array.isArray(data) ? data[0] : data;
+                
+                setProfile(updatedUser);
+                localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedUser));
+            } else {
+                setProfile(newProfileData);
+                localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfileData));
+            }
+            window.dispatchEvent(new Event('storage-update')); 
+            setIsEditingProfile(false);
+        } catch (err) {
+            alert('Error inesperado al guardar los cambios.');
+        }
     };
+
 
     const openEditPublication = (publication) => {
         setEditingPublication(publication);
         setEditForm({
             title: publication.title,
             description: publication.description,
-            city: publication.city || 'Arequipa',
             district: publication.district || 'Cerro Colorado',
-            location: publication.location,
+            location: publication.location || publication.neighborhood || '',
             price: publication.price ?? '',
             tags: publication.tags || [],
             status: publication.status || 'activo',
@@ -155,70 +140,58 @@ function Perfil() {
         setEditForm((prev) => ({ ...prev, [name]: value }));
     };
 
-    const savePublication = (event) => {
+    const savePublication = async (event) => {
         event.preventDefault();
+        try {
+            const { error } = await supabase
+                .from('publications')
+                .update({
+                    title: editForm.title,
+                    description: editForm.description,
+                    district: editForm.district,
+                    location: editForm.location,
+                    price: editingPublication.type === 'catalogo' ? Number(editForm.price) : null,
+                    status: editForm.status
+                })
+                .eq('id', editingPublication.id);
 
-        const updatedPublication = {
-            ...editingPublication,
-            ...editForm,
-            price: editingPublication.type === 'catalogo' ? Number(editForm.price) : null,
-            provider: profile.name,
-            phone: profile.phone,
-        };
-
-        const updatedPublications = publications.map((pub) =>
-            pub.id === editingPublication.id ? updatedPublication : pub
-        );
-
-        setPublications(updatedPublications);
-
-        const savedPublications = JSON.parse(localStorage.getItem(PUBLICATIONS_KEY) || '[]');
-        const updatedStorage = savedPublications.some((pub) => pub.id === updatedPublication.id)
-            ? savedPublications.map((pub) => pub.id === updatedPublication.id ? updatedPublication : pub)
-            : [...savedPublications, updatedPublication];
-
-        localStorage.setItem(PUBLICATIONS_KEY, JSON.stringify(updatedStorage));
-        setEditingPublication(null);
+            if (!error) {
+                setPublications(prev => prev.map(pub => pub.id === editingPublication.id ? { ...pub, ...editForm, price: pub.type === 'catalogo' ? Number(editForm.price) : null } : pub));
+                setEditingPublication(null);
+            }
+        } catch (err) {
+            console.error(err);
+        }
     };
 
-    const deletePublication = (publication) => {
+    const deletePublication = async (publication) => {
         if (!window.confirm(`¿Estás seguro de eliminar "${publication.title}"?`)) return;
-
-        const updatedPublications = publications.filter((item) => item.id !== publication.id);
-        setPublications(updatedPublications);
-
-        const savedPublications = JSON.parse(localStorage.getItem(PUBLICATIONS_KEY) || '[]');
-        localStorage.setItem(
-            PUBLICATIONS_KEY,
-            JSON.stringify(savedPublications.filter((item) => item.id !== publication.id))
-        );
+        try {
+            const { error } = await supabase.from('publications').delete().eq('id', publication.id);
+            if (!error) setPublications(prev => prev.filter(item => item.id !== publication.id));
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const myPublications = publications.filter((pub) => pub.type === 'catalogo');
     const myRequests = publications.filter((pub) => pub.type === 'ayuda' || pub.type === 'intercambio');
     const myEmergencies = publications.filter((pub) => pub.type === 'emergencia');
 
-    // Ubicación del perfil en 1 sola línea limpia
-    const fullProfileLocation = [
-        profile.location,
-        profile.district || 'Cerro Colorado',
-        profile.city || 'Arequipa'
-    ].filter(Boolean).join(', ');
-
+    const fullProfileLocation = profile ? [
+        profile.neighborhood || profile.location,
+        profile.district,
+        profile.region
+    ].filter(Boolean).join(', ') : 'Cargando ubicación...';
     const renderPublicationList = (items, emptyMessage, createHref) => {
+        if (loadingPublications) return <p className="text-sm text-brand-muted animate-pulse py-6">Cargando publicaciones...</p>;
         if (items.length === 0) {
             return (
                 <div className="bg-white border border-brand-border rounded-2xl p-10 md:p-12 text-center flex flex-col items-center justify-center">
                     <FiBox className="text-4xl text-brand-muted mb-3" />
-                    <h3 className="font-serif text-xl text-brand-dark">
-                        Aún no tienes publicaciones aquí
-                    </h3>
-                    <p className="text-sm text-brand-muted mt-2 max-w-md">
-                        {emptyMessage}
-                    </p>
-                    <div className="mt-6">
-                        <Button href={createHref}>Crear publicación</Button>
-                    </div>
+                    <h3 className="font-serif text-xl text-brand-dark">Aún no tienes publicaciones aquí</h3>
+                    <p className="text-sm text-brand-muted mt-2 max-w-md">{emptyMessage}</p>
+                    <div className="mt-6"><Button href={createHref}>Crear publicación</Button></div>
                 </div>
             );
         }
@@ -229,26 +202,16 @@ function Perfil() {
                     <div key={publication.id} className="flex flex-col">
                         <PublicationCard
                             publication={publication}
+                            categoryLabel={publication.category}
+                            typeLabel={publication.typeLabel}
                             onDetails={setSelectedPublication}
                         />
-
                         <div className="grid grid-cols-2 gap-2 mt-3">
-                            <button
-                                type="button"
-                                onClick={() => openEditPublication(publication)}
-                                className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border border-brand-border bg-brand-cream/30 text-brand-dark text-xs font-semibold hover:bg-brand-soft transition-colors"
-                            >
-                                <FiEdit2 className="text-brand-accent text-sm" /> 
-                                <span>Editar</span>
+                            <button type="button" onClick={() => openEditPublication(publication)} className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border border-brand-border bg-brand-cream/30 text-brand-dark text-xs font-semibold hover:bg-brand-soft transition-colors">
+                                <FiEdit2 className="text-brand-accent text-sm" /> <span>Editar</span>
                             </button>
-
-                            <button
-                                type="button"
-                                onClick={() => deletePublication(publication)}
-                                className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border border-red-200 bg-red-50/50 text-red-700 text-xs font-semibold hover:bg-red-100 transition-colors"
-                            >
-                                <FiTrash2 className="text-sm" /> 
-                                <span>Eliminar</span>
+                            <button type="button" onClick={() => deletePublication(publication)} className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border border-red-200 bg-red-50/50 text-red-700 text-xs font-semibold hover:bg-red-100 transition-colors">
+                                <FiTrash2 className="text-sm" /> <span>Eliminar</span>
                             </button>
                         </div>
                     </div>
@@ -257,39 +220,24 @@ function Perfil() {
         );
     };
 
+    if (!profile) return <div className="flex items-center justify-center min-h-screen"><p className="text-brand-muted">Cargando...</p></div>;
     return (
         <section className="max-w-7xl mx-auto px-5 lg:px-10 py-12">
             <div className="mb-8">
-                <span className="text-xs font-semibold uppercase tracking-wider text-brand-accent">
-                    Mi espacio
-                </span>
-                <h1 className="font-serif text-4xl text-brand-dark mt-2">
-                    Mi perfil
-                </h1>
-                <p className="text-sm text-brand-muted mt-2">
-                    Administra tus datos y las publicaciones que compartes con tu comunidad.
-                </p>
+                <span className="text-xs font-semibold uppercase tracking-wider text-brand-accent">Mi espacio</span>
+                <h1 className="font-serif text-4xl text-brand-dark mt-2">Mi perfil</h1>
+                <p className="text-sm text-brand-muted mt-2">Administra tus datos y las publicaciones que compartes con tu comunidad.</p>
             </div>
 
-            {/* Cabecera del Usuario */}
             <div className="bg-white border border-brand-border rounded-2xl p-5 md:p-7 mb-8 flex flex-col sm:flex-row items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-brand-soft flex items-center justify-center text-brand-accent text-2xl">
-                    <FiUser />
-                </div>
+                <div className="w-16 h-16 rounded-full bg-brand-soft flex items-center justify-center text-brand-accent text-2xl"><FiUser /></div>
                 <div className="text-center sm:text-left flex-1">
-                    <h2 className="font-serif text-2xl text-brand-dark">
-                        {profile.name}
-                    </h2>
-                    <p className="text-sm text-brand-muted mt-1">
-                        {fullProfileLocation}
-                    </p>
+                    <h2 className="font-serif text-2xl text-brand-dark">{profile.full_name || profile.name}</h2>
+                    <p className="text-sm text-brand-muted mt-1">{fullProfileLocation}</p>
                 </div>
-                <span className="text-xs bg-brand-soft text-brand-accent px-4 py-2 rounded-full font-medium">
-                    Miembro de la comunidad
-                </span>
+                <span className="text-xs bg-brand-soft text-brand-accent px-4 py-2 rounded-full font-medium">Miembro de la comunidad</span>
             </div>
 
-            {/* Pestañas de navegación */}
             <div className="flex flex-wrap gap-2 border-b border-brand-border mb-8">
                 {[
                     { id: 'datos', label: 'Mis datos', icon: <FiUser /> },
@@ -297,23 +245,12 @@ function Perfil() {
                     { id: 'solicitudes', label: 'Mis solicitudes', icon: <FiHeart /> },
                     { id: 'emergencias', label: 'Mis emergencias', icon: <FiAlertTriangle /> },
                 ].map((tab) => (
-                    <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition ${
-                            activeTab === tab.id
-                                ? 'border-brand-accent text-brand-accent'
-                                : 'border-transparent text-brand-muted hover:text-brand-dark'
-                        }`}
-                    >
-                        <span className="text-lg">{tab.icon}</span>
-                        {tab.label}
+                    <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition ${activeTab === tab.id ? 'border-brand-accent text-brand-accent' : 'border-transparent text-brand-muted hover:text-brand-dark'}`}>
+                        <span className="text-lg">{tab.icon}</span>{tab.label}
                     </button>
                 ))}
             </div>
 
-            {/* Pestaña: Mis datos */}
             {activeTab === 'datos' && (
                 <div className="bg-white border border-brand-border rounded-2xl p-5 md:p-8">
                     <div className="flex items-center justify-between mb-6">
@@ -321,134 +258,56 @@ function Perfil() {
                             <h3 className="font-serif text-2xl text-brand-dark">Datos personales</h3>
                             <p className="text-xs text-brand-muted mt-1">Información principal registrada en la plataforma.</p>
                         </div>
-                        <Button
-                            variant="secondary"
-                            onClick={() => setIsEditingProfile(true)}
-                            className="gap-1.5"
-                        >
-                            <FiEdit2 /> Editar
-                        </Button>
+                        <Button variant="secondary" onClick={() => setIsEditingProfile(true)} className="gap-1.5"><FiEdit2 /> Editar</Button>
                     </div>
 
                     <div className="space-y-4 text-sm text-brand-dark">
-                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
-                            <span className="text-xs text-brand-muted block mb-1">Nombre completo</span>
-                            <p className="font-medium text-base">{profile.name}</p>
-                        </div>
-
-                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
-                            <span className="text-xs text-brand-muted block mb-1">Ciudad / Departamento</span>
-                            <p className="font-medium text-base">{profile.city || 'Arequipa'}</p>
-                        </div>
-
-                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
-                            <span className="text-xs text-brand-muted block mb-1">Distrito</span>
-                            <p className="font-medium text-base">{profile.district || 'Cerro Colorado'}</p>
-                        </div>
-
-                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
-                            <span className="text-xs text-brand-muted block mb-1">Dirección / Zona</span>
-                            <p className="font-medium text-base">{profile.location}</p>
-                        </div>
-
-                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60">
-                            <span className="text-xs text-brand-muted block mb-1">Número de WhatsApp</span>
-                            <p className="font-medium text-base">{formatPhone(profile.phone)}</p>
-                        </div>
+                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60"><span className="text-xs text-brand-muted block mb-1">Nombre completo</span><p className="font-medium text-base">{profile.full_name || profile.name}</p></div>
+                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60"><span className="text-xs text-brand-muted block mb-1">Ciudad / Departamento</span><p className="font-medium text-base">{profile.region || profile.city || 'No especificado'}</p></div>
+                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60"><span className="text-xs text-brand-muted block mb-1">Distrito</span><p className="font-medium text-base">{profile.district || 'No especificado'}</p></div>
+                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60"><span className="text-xs text-brand-muted block mb-1">Dirección / Zona</span><p className="font-medium text-base">{profile.neighborhood || profile.location}</p></div>
+                        <div className="p-4 bg-brand-cream/30 rounded-xl border border-brand-border/60"><span className="text-xs text-brand-muted block mb-1">Número de WhatsApp</span><p className="font-medium text-base">{formatPhone(profile.whatsapp || profile.phone)}</p></div>
                     </div>
                 </div>
             )}
 
-            {/* Pestaña: Mis publicaciones */}
             {activeTab === 'publicaciones' && (
                 <>
                     <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-                        <div>
-                            <h3 className="font-serif text-2xl text-brand-dark">Mis publicaciones</h3>
-                            <p className="text-xs text-brand-muted mt-1">Productos y servicios que has compartido.</p>
-                        </div>
+                        <div><h3 className="font-serif text-2xl text-brand-dark">Mis publicaciones</h3><p className="text-xs text-brand-muted mt-1">Productos y servicios que has compartido.</p></div>
                         <Button href="/publicar?tipo=catalogo">Crear publicación</Button>
                     </div>
-                    {renderPublicationList(
-                        myPublications, 
-                        'Cuando publiques un producto o servicio, aparecerá aquí.',
-                        '/publicar?tipo=catalogo'
-                    )}
+                    {renderPublicationList(myPublications, 'Cuando publiques un producto o servicio, aparecerá aquí.', '/publicar?tipo=catalogo')}
                 </>
             )}
 
-            {/* Pestaña: Mis solicitudes */}
             {activeTab === 'solicitudes' && (
                 <>
                     <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-                        <div>
-                            <h3 className="font-serif text-2xl text-brand-dark">Mis solicitudes</h3>
-                            <p className="text-xs text-brand-muted mt-1">Solicitudes de ayuda vecinal o propuestas de intercambio.</p>
-                        </div>
+                        <div><h3 className="font-serif text-2xl text-brand-dark">Mis solicitudes</h3><p className="text-xs text-brand-muted mt-1">Solicitudes de ayuda vecinal o propuestas de intercambio.</p></div>
                         <Button href="/publicar?tipo=ayuda">Crear solicitud</Button>
                     </div>
-                    {renderPublicationList(
-                        myRequests, 
-                        'Cuando pidas ayuda o publiques un intercambio, aparecerá aquí.',
-                        '/publicar?tipo=ayuda'
-                    )}
+                    {renderPublicationList(myRequests, 'Cuando pidas ayuda o publiques un intercambio, aparecerá aquí.', '/publicar?tipo=ayuda')}
                 </>
             )}
 
-            {/* Pestaña: Mis emergencias */}
             {activeTab === 'emergencias' && (
                 <>
                     <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-                        <div>
-                            <h3 className="font-serif text-2xl text-brand-dark">Mis emergencias</h3>
-                            <p className="text-xs text-brand-muted mt-1">Alertas y reportes de riesgo compartidos con los vecinos.</p>
-                        </div>
+                        <div><h3 className="font-serif text-2xl text-brand-dark">Mis emergencias</h3><p className="text-xs text-brand-muted mt-1">Alertas y reportes de riesgo compartidos con los vecinos.</p></div>
                         <Button href="/publicar?tipo=emergencia">Reportar emergencia</Button>
                     </div>
-                    {renderPublicationList(
-                        myEmergencies, 
-                        'Cuando reportes un imprevisto o emergencia, aparecerá aquí.',
-                        '/publicar?tipo=emergencia'
-                    )}
+                    {renderPublicationList(myEmergencies, 'Cuando reportes un imprevisto o emergencia, aparecerá aquí.', '/publicar?tipo=emergencia')}
                 </>
             )}
 
-            {/* Cerrar sesión */}
             <div className="mt-10 border-t border-brand-border pt-6 flex justify-end">
-                <button
-                    type="button"
-                    onClick={() => {
-                        localStorage.removeItem(PROFILE_KEY);
-                        window.location.href = '/login';
-                    }}
-                    className="flex items-center gap-2 text-sm font-medium text-red-700 hover:text-red-800 transition-colors"
-                >
-                    <FiLogOut className="text-lg" /> Cerrar sesión
-                </button>
+                <button type="button" onClick={() => { localStorage.removeItem(PROFILE_KEY); window.dispatchEvent(new Event('storage-update')); window.location.href = '/login'; }} className="flex items-center gap-2 text-sm font-medium text-red-700 hover:text-red-800 transition-colors"><FiLogOut className="text-lg" /> Cerrar sesión</button>
             </div>
 
-            {/* Modal de Detalle */}
-            <PublicationDetail
-                publication={selectedPublication}
-                onClose={() => setSelectedPublication(null)}
-                variant="help"
-            />
-
-            {/* Modales reutilizables mediante FormModalOrCard */}
-            <EditProfileModal
-                profile={profile}
-                isOpen={isEditingProfile}
-                onClose={() => setIsEditingProfile(false)}
-                onSave={saveProfile}
-            />
-
-            <EditPublicationModal
-                editingPublication={editingPublication}
-                editForm={editForm}
-                onClose={() => setEditingPublication(null)}
-                onChange={handleEditChange}
-                onSubmit={savePublication}
-            />
+            <PublicationDetail publication={selectedPublication} onClose={() => setSelectedPublication(null)} variant="help" />
+            <EditProfileModal profile={profile} isOpen={isEditingProfile} onClose={() => setIsEditingProfile(false)} onSave={saveProfile} />
+            <EditPublicationModal editingPublication={editingPublication} editForm={editForm} onClose={() => setEditingPublication(null)} onChange={handleEditChange} onSubmit={savePublication} />
         </section>
     );
 }
