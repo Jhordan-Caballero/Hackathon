@@ -20,7 +20,7 @@ function SearchBar({
     };
 
     return (
-        <div className="bg-white border border-brand-border rounded-3xl shadow-sm p-5 md:p-6 mb-10 space-y-4">
+        <div className="bg-white dark:bg-zinc-900 border border-brand-border dark:border-zinc-800 rounded-3xl shadow-sm p-5 md:p-6 mb-10 space-y-4">
 
             {/* Input principal de búsqueda */}
             <div className="relative w-full">
@@ -31,7 +31,7 @@ function SearchBar({
                 />
             </div>
 
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-start gap-4 pt-4 border-t border-brand-border/60">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-start gap-4 pt-4 border-t border-brand-border/60 dark:border-zinc-800">
 
                 <div className="relative inline-flex items-center min-w-[200px] flex-1 sm:flex-none">
                     <span className="absolute left-3.5 text-brand-accent text-base pointer-events-none">
@@ -41,17 +41,17 @@ function SearchBar({
                     <select
                         value={selectedCity}
                         onChange={handleCitySelectChange}
-                        className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-brand-border bg-brand-cream/30 text-sm text-brand-dark font-medium outline-none focus:border-brand-accent transition-colors appearance-none cursor-pointer"
+                        className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-brand-border dark:border-zinc-700 bg-brand-cream/30 dark:bg-zinc-800 text-sm text-brand-dark dark:text-zinc-200 font-medium outline-none focus:border-brand-accent transition-colors appearance-none cursor-pointer"
                     >
-                        <option value="">Todas las ciudades</option>
+                        <option value="" className="bg-white dark:bg-zinc-900 text-brand-dark dark:text-zinc-200">Todas las ciudades</option>
                         {Object.keys(PERU_LOCATIONS).map((city) => (
-                            <option key={city} value={city}>
+                            <option key={city} value={city} className="bg-white dark:bg-zinc-900 text-brand-dark dark:text-zinc-200">
                                 {city}
                             </option>
                         ))}
                     </select>
 
-                    <span className="absolute right-3 text-brand-muted text-xs pointer-events-none">▼</span>
+                    <span className="absolute right-3 text-brand-muted dark:text-zinc-400 text-xs pointer-events-none">▼</span>
                 </div>
 
                 <div className="relative inline-flex items-center min-w-[200px] flex-1 sm:flex-none">
@@ -63,22 +63,22 @@ function SearchBar({
                         value={selectedZone}
                         onChange={(e) => onZoneChange && onZoneChange(e.target.value)}
                         disabled={!selectedCity}
-                        className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-brand-border bg-brand-cream/30 text-sm text-brand-dark font-medium outline-none focus:border-brand-accent transition-colors appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-brand-border dark:border-zinc-700 bg-brand-cream/30 dark:bg-zinc-800 text-sm text-brand-dark dark:text-zinc-200 font-medium outline-none focus:border-brand-accent transition-colors appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <option value="todas">Todos los distritos</option>
+                        <option value="todas" className="bg-white dark:bg-zinc-900 text-brand-dark dark:text-zinc-200">Todos los distritos</option>
                         {selectedCity &&
                             PERU_LOCATIONS[selectedCity].map((dist) => (
-                                <option key={dist} value={dist}>
+                                <option key={dist} value={dist} className="bg-white dark:bg-zinc-900 text-brand-dark dark:text-zinc-200">
                                     {dist}
                                 </option>
                             ))}
                     </select>
 
-                    <span className="absolute right-3 text-brand-muted text-xs pointer-events-none">▼</span>
+                    <span className="absolute right-3 text-brand-muted dark:text-zinc-400 text-xs pointer-events-none">▼</span>
                 </div>
 
                 {typeof resultsCount === 'number' && (
-                    <span className="text-sm text-brand-muted font-medium md:ml-auto text-left md:text-right py-2 md:py-0">
+                    <span className="text-sm text-brand-muted dark:text-zinc-400 font-medium md:ml-auto text-left md:text-right py-2 md:py-0">
                         {resultsCount} {resultsCount === 1 ? 'publicación' : 'publicaciones'}
                     </span>
                 )}
