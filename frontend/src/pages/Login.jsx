@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiUser, FiPhone } from 'react-icons/fi';
 import FormModalOrCard from '../components/forms/FormModalOrCard';
 import logoImg from '../assets/Loge.png';
-import { supabase } from '../supabaseClient'; 
+import { loginWithPhone } from '../lib/api'; // sesión real en Supabase
 
 const PROFILE_KEY = 'community-profile'; 
 
@@ -18,23 +18,10 @@ function Login() {
         setMessage('Verificando credenciales...');
 
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('full_name', name.trim())
-                .eq('whatsapp', phone.trim());
+            // Inicia sesión REAL en Supabase con nombre + teléfono
+            const profile = await loginWithPhone({ full_name: name, phone });
 
-            if (error) {
-                setMessage(`Error: ${error.message}`);
-                return;
-            }
-
-            if (data.length === 0) {
-                setMessage('Usuario o número de WhatsApp incorrectos.');
-                return;
-            }
-
-            localStorage.setItem(PROFILE_KEY, JSON.stringify(data[0]));
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
             window.dispatchEvent(new Event('storage-update')); 
             setMessage('¡Inicio de sesión exitoso! Redirigiendo...');
 
@@ -43,7 +30,8 @@ function Login() {
             }, 1200);
 
         } catch (err) {
-            setMessage('Error al intentar conectar.');
+            // Ej.: "No encontramos ese número..." o "El nombre no coincide..."
+            setMessage(err.message || 'Error al intentar conectar.');
         }
     };
 

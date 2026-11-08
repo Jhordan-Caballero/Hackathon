@@ -168,7 +168,7 @@ function PublicationDetail({
 
                             <div className="pt-2">
                                 <Button
-                                    href={`https://wa.me{publication.contact_whatsapp || publication.phone}`}
+                                    href={`https://wa.me/${String(publication.contact_whatsapp || publication.phone || '').replace(/\D/g, '')}`}
                                     className="w-full flex items-center justify-center gap-2 !bg-emerald-700 hover:!bg-emerald-800 rounded-xl py-3 text-sm shadow-2xs transition-transform hover:-translate-y-0.5"
                                 >
                                     <FaWhatsapp className="text-lg" />

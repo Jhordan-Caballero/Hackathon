@@ -5,6 +5,27 @@ import { FiPlus, FiX, FiPhone, FiAlertTriangle } from 'react-icons/fi';
 import FormModalOrCard from '../components/forms/FormModalOrCard';
 import { PERU_LOCATIONS } from '../datos/peruLocations';
 import { supabase } from '../supabaseClient';
+import { reportEmergencySafe } from '../lib/offline';
+
+// Deduce el tipo de emergencia a partir del texto (la tabla solo acepta estos valores)
+function tipoDeEmergencia(texto) {
+    const t = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (/incendi|fuego|humo|quema/.test(t)) return 'incendio';
+    if (/sismo|temblor|terremoto/.test(t)) return 'sismo';
+    if (/inunda|huaico|lluvia|agua estancada/.test(t)) return 'inundacion';
+    if (/accidente|choque|atropell/.test(t)) return 'accidente';
+    if (/robo|asalto|ladron|seguridad|sospechos/.test(t)) return 'seguridad';
+    if (/salud|herid|desmay|enferm|ambulancia/.test(t)) return 'salud';
+    if (/sin agua|sin luz|corte de|apagon|desague/.test(t)) return 'servicios_basicos';
+    if (/adulto mayor|abuel|sol[ao]|vulnerable|discapacidad/.test(t)) return 'persona_vulnerable';
+    return 'otro';
+}
+
+// 987654321 → 51987654321 (formato que usan WhatsApp y la base de datos)
+function formatoTelefono(raw) {
+    const d = raw.replace(/\D/g, '');
+    return d.length === 9 && d.startsWith('9') ? `51${d}` : d;
+}
 
 const PROFILE_KEY = 'community-profile';
 
@@ -53,10 +74,11 @@ function Publicar() {
                 district: parsed.district || '',
                 location: parsed.neighborhood || '',
             }));
-        } else {
+        } else if (initialType !== 'emergencia') {
+            // Para publicar hay que registrarse; para reportar emergencias NO
             navigate('/login');
         }
-    }, [navigate]);
+    }, [navigate, initialType]);
 
     const handleTypeChange = (newType) => {
         setType(newType);
@@ -109,7 +131,31 @@ function Publicar() {
         event.preventDefault();
         setMessage('Enviando publicación al vecindario...');
 
-        const cleanPhone = form.phone.replace(/\D/g, '');
+        const cleanPhone = formatoTelefono(form.phone);
+
+        // EMERGENCIAS van a su propia tabla (tablero, "Yo ayudo", modo offline)
+        if (type === 'emergencia') {
+            try {
+                const resultado = await reportEmergencySafe({
+                    emergency_type: tipoDeEmergencia(`${form.title} ${form.description}`),
+                    description: `${form.title.trim()}. ${form.description.trim()}`,
+                    location: form.location.trim(),
+                    region: form.city,
+                    district: form.district,
+                    contact_phone: cleanPhone,
+                    reporter_name: profileData?.full_name,
+                });
+                setMessage(
+                    resultado.status === 'enviada'
+                        ? '¡Emergencia reportada! Los vecinos ya pueden verla.'
+                        : 'Sin señal: tu emergencia se enviará sola apenas vuelva la conexión.'
+                );
+                setTimeout(() => { navigate('/emergencias'); }, 1500);
+            } catch (err) {
+                setMessage(err.message || 'No se pudo reportar la emergencia.');
+            }
+            return;
+        }
 
         let dbSection = 'servicios';
         let dbType = 'servicio';
@@ -130,11 +176,19 @@ function Publicar() {
         }
 
         try {
+            // Categoría por defecto "Otros" (el asistente IA solo busca publicaciones con categoría)
+            const { data: categoriaOtros } = await supabase
+                .from('categories')
+                .select('id')
+                .eq('slug', 'otros')
+                .maybeSingle();
+
             const { error } = await supabase
                 .from('publications')
                 .insert([
                     {
-                        user_id: profileData?.id,
+                        // user_id lo pone Supabase solo (el usuario con sesión iniciada)
+                        category_id: categoriaOtros?.id ?? null,
                         title: form.title.trim(),
                         description: form.description.trim(),
                         type: dbType,
@@ -146,7 +200,7 @@ function Publicar() {
                         location: form.location.trim(),
                         contact_whatsapp: cleanPhone,
                         tags: tags.map(tag => tag.replace('#', '').toLowerCase().trim()),
-                        emergency_support: type === 'emergencia'
+                        emergency_support: false
                         // 🚀 Modificado: Quitamos el envío de image_urls
                     }
                 ]);

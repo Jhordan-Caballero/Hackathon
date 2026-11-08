@@ -4,7 +4,7 @@ import { FiUser, FiMapPin, FiPhone } from 'react-icons/fi';
 import FormModalOrCard from '../components/forms/FormModalOrCard';
 import logoImg from '../assets/Loge.png';
 import { PERU_LOCATIONS } from '../datos/peruLocations';
-import { supabase } from '../supabaseClient';
+import { registerWithPhone } from '../lib/api'; // sesión real en Supabase
 
 const PROFILE_KEY = 'community-profile';
 
@@ -44,48 +44,20 @@ function Registro() {
             return;
         }
 
-        // Le anteponemos el prefijo '51' exigido por tu base de datos de producción
-        const formattedPhone = `51${rawPhone}`;
-
         try {
-            // 🚀 CANDADO DE SEGURIDAD: Consultamos a Supabase si el número ya existe en profiles
-            const { data: existingUser, error: searchError } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('whatsapp', formattedPhone)
-                .maybeSingle();
-
-            if (searchError) {
-                console.error("Error validando teléfono:", searchError.message);
-            }
-
-            // Si encuentra una coincidencia, frenamos el registro de inmediato
-            if (existingUser) {
-                setMessage('⚠️ Este número de WhatsApp ya se encuentra registrado con otra cuenta.');
-                return;
-            }
-
             setMessage('Registrando en la base de datos...');
-            const { data, error } = await supabase
-                .from('profiles')
-                .insert([
-                    {
-                        full_name: form.name.trim(),
-                        region: form.city,
-                        district: form.district,
-                        neighborhood: form.location.trim(),
-                        whatsapp: formattedPhone, // Guardamos el celular formateado de forma segura
-                        has_whatsapp: true
-                    }
-                ])
-                .select();
+            // Crea el usuario con sesión REAL y su perfil en Supabase.
+            // Si el número ya existe, avisa: "Ese número ya está registrado..."
+            const profile = await registerWithPhone({
+                full_name: form.name.trim(),
+                phone: rawPhone,
+                has_whatsapp: true,
+                region: form.city,
+                district: form.district,
+                neighborhood: form.location.trim(),
+            });
 
-            if (error) {
-                setMessage(`Error: ${error.message}`);
-                return;
-            }
-
-            localStorage.setItem(PROFILE_KEY, JSON.stringify(data[0]));
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
             window.dispatchEvent(new Event('storage-update'));
             setMessage('¡Registro exitoso! Redirigiendo a tu perfil...');
 
@@ -94,7 +66,7 @@ function Registro() {
             }, 1200);
 
         } catch (err) {
-            setMessage('Ocurrió un error inesperado al conectar.');
+            setMessage(err.message || 'Ocurrió un error inesperado al conectar.');
         }
     };
 

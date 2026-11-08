@@ -15,6 +15,7 @@ import PublicationDetail from '../components/shared/PublicationDetail';
 import EditPublicationModal from '../components/shared/EditPublicationModal';
 import EditProfileModal from '../components/shared/EditProfileModal';
 import { supabase } from '../supabaseClient';
+import { logout } from '../lib/api';
 
 const PROFILE_KEY = 'community-profile';
 
@@ -349,7 +350,7 @@ function Perfil() {
             )}
 
             <div className="mt-10 border-t border-brand-border pt-6 flex justify-end">
-                <button type="button" onClick={() => { localStorage.removeItem(PROFILE_KEY); window.dispatchEvent(new Event('storage-update')); window.location.href = '/login'; }} className="flex items-center gap-2 text-sm font-medium text-red-700 hover:text-red-800 transition-colors"><FiLogOut className="text-lg" /> Cerrar sesión</button>
+                <button type="button" onClick={async () => { await logout(); localStorage.removeItem(PROFILE_KEY); window.dispatchEvent(new Event('storage-update')); window.location.href = '/login'; }} className="flex items-center gap-2 text-sm font-medium text-red-700 hover:text-red-800 transition-colors"><FiLogOut className="text-lg" /> Cerrar sesión</button>
             </div>
 
             <PublicationDetail publication={selectedPublication} onClose={() => setSelectedPublication(null)} variant="help" />
