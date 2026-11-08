@@ -3,6 +3,8 @@
 
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import { readCache, withOfflineCache } from './cache'
+import type { CachedValue } from './cache'
 import type {
   Category,
   Emergency,
@@ -158,11 +160,13 @@ export async function logout(): Promise<void> {
 // =====================================================================
 
 export async function getCategories(section?: Section): Promise<Category[]> {
-  let q = supabase.from('categories').select('*').order('name')
-  if (section) q = q.in('section', [section, 'ambos'])
-  const { data, error } = await q
-  if (error) throw error
-  return data as Category[]
+  return withOfflineCache(`categorias:${section ?? 'todas'}`, async () => {
+    let q = supabase.from('categories').select('*').order('name')
+    if (section) q = q.in('section', [section, 'ambos'])
+    const { data, error } = await q
+    if (error) throw error
+    return data as Category[]
+  })
 }
 
 // =====================================================================
@@ -189,7 +193,23 @@ export async function uploadImages(files: File[]): Promise<string[]> {
 // PUBLICACIONES  (catálogo = 'servicios', ayuda vecinal = 'comunidad')
 // =====================================================================
 
+/**
+ * Lista publicaciones. Sin internet devuelve la última copia guardada
+ * (si no hay copia con esos filtros exactos, filtra la lista general guardada).
+ */
 export async function listPublications(f: PublicationFilters): Promise<PublicationFeedItem[]> {
+  const baseKey = `publicaciones:${JSON.stringify({ section: f.section })}`
+  return withOfflineCache(
+    `publicaciones:${JSON.stringify(f)}`,
+    () => fetchPublications(f),
+    () => {
+      const base = readCache<PublicationFeedItem[]>(baseKey)
+      return base ? { ...base, data: filterPublicationsLocally(base.data, f) } : null
+    },
+  )
+}
+
+async function fetchPublications(f: PublicationFilters): Promise<PublicationFeedItem[]> {
   let q = supabase
     .from('publications_feed')
     .select('*')
@@ -220,14 +240,50 @@ export async function listPublications(f: PublicationFilters): Promise<Publicati
   return data as PublicationFeedItem[]
 }
 
+/** Mismos filtros que en Supabase, pero sobre la copia guardada (modo offline). */
+function filterPublicationsLocally(items: PublicationFeedItem[], f: PublicationFilters): PublicationFeedItem[] {
+  const search = f.search?.trim().toLowerCase()
+  return items.filter((p) => {
+    if (search) {
+      if (search.startsWith('#')) {
+        if (!p.tags.includes(cleanTag(search))) return false
+      } else if (!`${p.title} ${p.description ?? ''}`.toLowerCase().includes(search)) {
+        return false
+      }
+    }
+    if (f.categoryId && p.category_id !== f.categoryId) return false
+    if (f.region && p.region !== f.region) return false
+    if (f.district && p.district !== f.district) return false
+    if (f.intent && p.intent !== f.intent) return false
+    if (f.type && p.type !== f.type) return false
+    if (f.minRating && p.avg_rating < f.minRating) return false
+    if (f.emergencySupport && !p.emergency_support) return false
+    return true
+  })
+}
+
 export async function getPublication(id: string): Promise<PublicationFeedItem | null> {
-  const { data, error } = await supabase
-    .from('publications_feed')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle()
-  if (error) throw error
-  return data as PublicationFeedItem | null
+  return withOfflineCache(
+    `publicacion:${id}`,
+    async () => {
+      const { data, error } = await supabase
+        .from('publications_feed')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+      if (error) throw error
+      return data as PublicationFeedItem | null
+    },
+    // sin internet: la busca dentro de las listas guardadas
+    () => {
+      for (const section of ['servicios', 'comunidad']) {
+        const base = readCache<PublicationFeedItem[]>(`publicaciones:${JSON.stringify({ section })}`)
+        const found = base?.data.find((p) => p.id === id)
+        if (base && found) return { data: found, savedAt: base.savedAt } as CachedValue<PublicationFeedItem | null>
+      }
+      return null
+    },
+  )
 }
 
 export async function createPublication(input: PublicationInput, photos: File[] = []): Promise<Publication> {
@@ -342,6 +398,20 @@ export async function addReview(publicationId: string, rating: number, comment?:
 // =====================================================================
 
 export async function listEmergencies(opts: { region?: string; district?: string; onlyActive?: boolean } = {}): Promise<EmergencyFeedItem[]> {
+  return withOfflineCache(`emergencias:${JSON.stringify(opts)}`, () => fetchEmergencies(opts), () => {
+    const base = readCache<EmergencyFeedItem[]>(`emergencias:${JSON.stringify({})}`)
+    if (!base) return null
+    const data = base.data.filter(
+      (e) =>
+        (!opts.region || e.region === opts.region) &&
+        (!opts.district || e.district === opts.district) &&
+        (opts.onlyActive === false || e.status !== 'resuelta'),
+    )
+    return { ...base, data }
+  })
+}
+
+async function fetchEmergencies(opts: { region?: string; district?: string; onlyActive?: boolean }): Promise<EmergencyFeedItem[]> {
   let q = supabase
     .from('emergencies_feed')
     .select('*')
