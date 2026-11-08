@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
+import { logout } from '../../lib/api'; // cierra también la sesión de Supabase
 
 const navigationLinks = [
     { label: 'Catálogo', to: '/' },
@@ -94,6 +95,7 @@ function Navbar() {
     const closeMenu = () => setMenuOpen(false);
 
     const handleLogout = () => {
+        void logout();
         localStorage.removeItem('community-profile');
         setUsuario(null);
         setUserDropdownOpen(false);

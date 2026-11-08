@@ -2,12 +2,15 @@ import { useMemo, useState, useEffect } from 'react';
 
 import Reveal from '../components/ui/Reveal';
 import PublicationCard from '../components/shared/PublicationCard';
-import PublicationDetail from '../components/shared/PublicationDetail';
 import SectionHero from '../components/shared/SectionHero';
 import SearchBar from '../components/shared/SearchBar';
 import EmptyState from '../components/ui/EmptyState';
 import PromotionalBanner from '../components/shared/PromotionalBanner';
-import { supabase } from '../supabaseClient';
+import NumerosEmergencia from '../components/shared/NumerosEmergencia';
+import DirectorioEmergencia from '../components/shared/DirectorioEmergencia';
+import BotonYoAyudo from '../components/shared/BotonYoAyudo';
+import { listEmergencies, subscribeToEmergencies, callLink, whatsappLink } from '../lib/api';
+import { EMERGENCY_LABELS } from '../lib/types';
 
 function Emergencias() {
     const [search, setSearch] = useState('');
@@ -20,43 +23,30 @@ function Emergencias() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Lee la tabla de EMERGENCIAS (funciona sin internet con la última copia)
         async function fetchEmergencies() {
-            setLoading(true);
             try {
-                const { data, error } = await supabase
-                    .from('publications')
-                    .select(`
-                        *,
-                        profiles (
-                            full_name,
-                            whatsapp
-                        )
-                    `)
-                    .eq('section', 'comunidad') 
-                    .eq('emergency_support', true)
-                    .order('created_at', { ascending: false });
-
-                if (error) {
-                    console.error("Error al traer emergencias:", error.message);
-                    return;
-                }
-
-                const formattedData = (data || []).map(pub => ({
-                    ...pub,
-                    provider: pub.profiles?.full_name || 'Vecino alerta',
-                    phone: pub.contact_whatsapp || pub.profiles?.whatsapp || '',
-                    image: Array.isArray(pub.image_urls) ? pub.image_urls[0] : pub.image_urls,
-                    typeLabel: 'Emergencia'
+                const data = await listEmergencies();
+                const formattedData = data.map((e) => ({
+                    ...e,
+                    title: EMERGENCY_LABELS[e.emergency_type] || 'Emergencia',
+                    provider: e.reporter_name || 'Vecino alerta',
+                    phone: e.contact_phone || '',
+                    contact_whatsapp: e.contact_phone || '',
+                    image: Array.isArray(e.image_urls) ? e.image_urls[0] : e.image_urls,
+                    tags: [],
+                    typeLabel: 'Emergencia',
                 }));
-
                 setPublications(formattedData);
             } catch (err) {
-                console.error("Error inesperado:", err);
+                console.error('Error al traer emergencias:', err);
             } finally {
                 setLoading(false);
             }
         }
         fetchEmergencies();
+        // Tiempo real: se actualiza solo cuando alguien reporta o responde "Yo ayudo"
+        return subscribeToEmergencies(fetchEmergencies);
     }, []);
 
     const locations = useMemo(() => {
@@ -146,7 +136,7 @@ function Emergencias() {
                         >
                             <PublicationCard
                                 publication={emergency}
-                                categoryLabel={emergency.category || emergency.category_id} // 🚀 FIX: Asegura compatibilidad de etiquetas
+                                categoryLabel={emergency.title}
                                 typeLabel="Emergencia"
                                 onDetails={setSelectedEmergency}
                             />
@@ -159,12 +149,77 @@ function Emergencias() {
                 />
             )}
 
-            {/* Modal de detalles */}
-            <PublicationDetail
-                publication={selectedEmergency}
-                onClose={() => setSelectedEmergency(null)}
-                variant="help"
-            />
+            {/* Detalle de la emergencia + "Yo ayudo" */}
+            {selectedEmergency && (
+                <div
+                    className="fixed inset-0 z-[90] bg-black/50 flex items-end sm:items-center justify-center p-4"
+                    onClick={() => setSelectedEmergency(null)}
+                >
+                    <div
+                        className="bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl p-6 shadow-xl text-left space-y-4"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <p className="text-xs font-semibold text-brand-red uppercase tracking-wider">
+                                    {selectedEmergency.status}
+                                </p>
+                                <h3 className="font-serif text-2xl text-brand-dark">{selectedEmergency.title}</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedEmergency(null)}
+                                aria-label="Cerrar"
+                                className="w-9 h-9 shrink-0 rounded-full bg-brand-soft text-brand-dark hover:bg-brand-border"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        {selectedEmergency.image && (
+                            <img src={selectedEmergency.image} alt="" className="w-full rounded-2xl object-cover max-h-60" />
+                        )}
+                        <p className="text-sm text-brand-dark leading-relaxed">{selectedEmergency.description}</p>
+                        <p className="text-sm text-brand-muted">
+                            📍 {[selectedEmergency.location, selectedEmergency.district, selectedEmergency.region].filter(Boolean).join(' · ')}
+                            <br />
+                            Reportó: {selectedEmergency.provider} ·{' '}
+                            {new Date(selectedEmergency.created_at).toLocaleString('es-PE')}
+                        </p>
+                        {selectedEmergency.phone && (
+                            <div className="flex gap-2">
+                                <a
+                                    href={callLink(selectedEmergency.phone)}
+                                    className="flex-1 text-center py-3 rounded-xl border border-brand-border text-brand-dark text-sm font-semibold hover:bg-brand-soft"
+                                >
+                                    📞 Llamar
+                                </a>
+                                <a
+                                    href={whatsappLink(selectedEmergency.phone, 'Hola, vi tu reporte de emergencia en la app del barrio.')}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex-1 text-center py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold"
+                                >
+                                    WhatsApp
+                                </a>
+                            </div>
+                        )}
+                        <BotonYoAyudo emergencyId={selectedEmergency.id} status={selectedEmergency.status} />
+                    </div>
+                </div>
+            )}
+
+            {/* Directorio de apoyo y números de emergencia (funcionan sin internet) */}
+            <div className="grid lg:grid-cols-2 gap-6 my-10">
+                <Reveal>
+                    <DirectorioEmergencia
+                        region={selectedCity && selectedCity !== 'todas' ? selectedCity : undefined}
+                        district={selectedLocation !== 'todas' ? selectedLocation : undefined}
+                    />
+                </Reveal>
+                <Reveal>
+                    <NumerosEmergencia />
+                </Reveal>
+            </div>
 
             <Reveal>
                 <PromotionalBanner
