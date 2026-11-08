@@ -7,6 +7,7 @@ import SectionHero from '../components/shared/SectionHero';
 import EmptyState from '../components/ui/EmptyState';
 import SearchBar from '../components/shared/SearchBar';
 import PromotionalBanner from '../components/shared/PromotionalBanner';
+import MiniChat from '../components/Minichat/MiniChat';
 
 
 // Datos de ejemplo con estado inicial 'activo'
@@ -264,7 +265,7 @@ function Catalog() {
                 onClose={() => setSelectedPublication(null)}
                 variant="catalog"
             />
-
+            <MiniChat />
             {/* Crear publicación */}
             <Reveal>
                 <PromotionalBanner
