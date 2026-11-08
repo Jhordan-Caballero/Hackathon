@@ -1,5 +1,3 @@
-// src/data/peruLocations.js
-
 export const PERU_LOCATIONS = {
     "Arequipa": [
         "Arequipa Cercado",

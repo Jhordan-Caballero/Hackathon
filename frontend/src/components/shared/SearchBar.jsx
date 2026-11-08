@@ -31,10 +31,8 @@ function SearchBar({
                 />
             </div>
 
-            {/* Barra inferior: Selectores dinámicos por Ciudad y Distrito + Contador */}
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-start gap-4 pt-4 border-t border-brand-border/60">
 
-                {/* 1. Selector de Ciudad / Departamento */}
                 <div className="relative inline-flex items-center min-w-[200px] flex-1 sm:flex-none">
                     <span className="absolute left-3.5 text-brand-accent text-base pointer-events-none">
                         <FiGlobe />
@@ -56,7 +54,6 @@ function SearchBar({
                     <span className="absolute right-3 text-brand-muted text-xs pointer-events-none">▼</span>
                 </div>
 
-                {/* 2. Selector de Distrito / Zona */}
                 <div className="relative inline-flex items-center min-w-[200px] flex-1 sm:flex-none">
                     <span className="absolute left-3.5 text-brand-accent text-base pointer-events-none">
                         <FiMapPin />
@@ -80,7 +77,6 @@ function SearchBar({
                     <span className="absolute right-3 text-brand-muted text-xs pointer-events-none">▼</span>
                 </div>
 
-                {/* Contador de resultados empujado al extremo derecho */}
                 {typeof resultsCount === 'number' && (
                     <span className="text-sm text-brand-muted font-medium md:ml-auto text-left md:text-right py-2 md:py-0">
                         {resultsCount} {resultsCount === 1 ? 'publicación' : 'publicaciones'}

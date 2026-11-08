@@ -66,7 +66,6 @@ function AyudaVecinal() {
         return [...new Set(locs.filter(Boolean))];
     }, [publications]);
 
-    // Filtro exacto de tu barra de búsqueda y zonas
     const filteredPublications = useMemo(() => {
         return publications.filter((publication) => {
             const searchText = search.toLowerCase().trim();
@@ -118,7 +117,6 @@ function AyudaVecinal() {
                 description="Comparte lo que necesitas, ofrece tu apoyo e intercambia recursos con las personas de tu comunidad."
             />
 
-            {/* 🚀 TU BARRA DE BÚSQUEDA ORIGINAL EXACTA */}
             <Reveal>
                 <SearchBar
                     search={search}
@@ -138,7 +136,6 @@ function AyudaVecinal() {
                 </h3>
             </div>
 
-            {/* Renderizado condicional basado en la carga del backend */}
             {loading ? (
                 <div className="text-center py-16">
                     <p className="text-brand-muted animate-pulse text-sm">Cargando la red de apoyo vecinal desde Supabase...</p>

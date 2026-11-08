@@ -197,13 +197,10 @@ function Perfil() {
         }
     };
 
-    // 1. Catálogo comercial (lo que venga de la sección servicios)
     const myPublications = publications.filter((pub) => pub.section === 'servicios');
 
-    // 2. Mis solicitudes (Sección comunidad pero que NO sean emergencias médicas/riesgos)
     const myRequests = publications.filter((pub) => pub.section === 'comunidad' && !pub.emergency_support);
 
-    // 3. Mis emergencias (Sección comunidad que tengan activado el interruptor real del backend)
     const myEmergencies = publications.filter((pub) => pub.section === 'comunidad' && pub.emergency_support);
 
 

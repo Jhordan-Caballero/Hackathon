@@ -24,7 +24,6 @@ function Catalog() {
         async function fetchPublications() {
             setLoading(true);
             try {
-                // 🚀 FIJO: Agregamos la subconsulta para jalar los comentarios reales y el nombre del autor
                 const { data, error } = await supabase
                     .from('publications')
                     .select(`

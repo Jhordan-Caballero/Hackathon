@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import BrandLogo from '../layout/BrandLogo';
 
-// 🚀 BLOQUES DE CONTENIDO REALES: Enlazados directamente a tus pestañas y servicios comunitarios
 const footerGroups = [
     {
         title: 'Navegación',
@@ -52,7 +51,6 @@ function Footer() {
                             <ul className="space-y-3 text-xs text-brand-muted font-light">
                                 {group.links.map((link, linkIndex) => (
                                     <li key={linkIndex}>
-                                        {/* Cambiamos las etiquetas 'a' por 'Link' de react-router para navegación nativa sin recargar */}
                                         <Link
                                             to={link.to}
                                             className="hover:text-brand-dark transition-colors"
